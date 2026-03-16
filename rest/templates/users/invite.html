@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="mt-4">Invitar Personal</h1>
+
+<form method="POST">
+  <div class="mb-3">
+    <label class="form-label">Correo electronico</label>
+    <input type="email" name="email" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Rol</label>
+    <select name="role" class="form-select">
+      <option value="manager">Gerente</option>
+      <option value="staff" selected>Personal</option>
+      {% if g.current_business.business_type == 'hotel' %}
+      <option value="cleaner">Personal de limpieza</option>
+      {% elif g.current_business.business_type == 'service' %}
+      <option value="technician">Tecnico</option>
+      {% endif %}
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary">Generar Invitacion</button>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary">Cancelar</a>
+</form>
+
+<div class="alert alert-info mt-4">
+  <strong>Nota:</strong> El enlace de invitacion sera enviado por correo electronico.
+  Si no esta configurado el servidor de correo, se mostrara el enlace en pantalla.
+</div>
+{% endblock %}
