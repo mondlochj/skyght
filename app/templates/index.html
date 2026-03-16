@@ -1,0 +1,3053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skyght Enterprise - OCR Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">Skyght <span>Enterprise</span></div>
+            <nav class="nav-links" id="nav-links">
+                <a href="#" onclick="showAuth()">Sign In</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Auth Section -->
+        <div id="auth-section" class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h2>Welcome to Skyght</h2>
+                    <p>Sign in to access your OCR dashboard</p>
+                </div>
+
+                <div id="alert-container"></div>
+
+                <div class="auth-tabs">
+                    <button class="auth-tab active" onclick="switchTab('login')">Sign In</button>
+                    <button class="auth-tab" onclick="switchTab('register')">Create Account</button>
+                </div>
+
+                <!-- Login Form -->
+                <form id="login-form" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label class="form-label" for="login-email">Email Address</label>
+                        <input type="email" id="login-email" class="form-input" placeholder="you@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="login-password">Password</label>
+                        <input type="password" id="login-password" class="form-input" placeholder="Enter your password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+                </form>
+
+                <!-- Register Form -->
+                <form id="register-form" style="display: none;" onsubmit="handleRegister(event)">
+                    <div class="form-group">
+                        <label class="form-label" for="register-email">Email Address</label>
+                        <input type="email" id="register-email" class="form-input" placeholder="you@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="register-password">Password</label>
+                        <input type="password" id="register-password" class="form-input" placeholder="Create a password" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="register-confirm">Confirm Password</label>
+                        <input type="password" id="register-confirm" class="form-input" placeholder="Confirm your password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+                </form>
+
+                <!-- Verification Required -->
+                <div id="verification-required" style="display: none; text-align: center; padding: 1rem 0;">
+                    <p style="color: var(--text-light); margin-bottom: 1rem;">
+                        Please verify your email to sign in.
+                    </p>
+                    <button class="btn btn-secondary btn-block" onclick="resendVerification()">
+                        Resend Verification Email
+                    </button>
+                </div>
+
+                <!-- Invitation Info -->
+                <div id="invitation-info" style="display: none;">
+                    <div style="background: rgba(37, 99, 235, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <p style="margin: 0; font-size: 0.9rem;">
+                            You've been invited to join <strong id="invite-team-name"></strong> by <strong id="invite-from"></strong>.
+                        </p>
+                        <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: var(--text-light);">
+                            Sign in or create an account to accept the invitation.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="dashboard">
+            <!-- Dashboard Tabs -->
+            <div class="dashboard-tabs">
+                <button class="dashboard-tab active" onclick="switchDashboardTab('ocr')" id="tab-ocr">OCR Scanner</button>
+                <button class="dashboard-tab" onclick="switchDashboardTab('documents')" id="tab-documents">Documents</button>
+                <button class="dashboard-tab" onclick="switchDashboardTab('teams')" id="tab-teams">My Teams</button>
+                <button class="dashboard-tab" onclick="switchDashboardTab('admin')" id="tab-admin" style="display: none;">Admin Panel</button>
+            </div>
+
+            <div class="dashboard-header">
+                <h1 class="dashboard-title" id="dashboard-title">OCR Scanner</h1>
+                <div class="user-info">
+                    <span class="user-badge" id="user-role-badge" style="display: none;">Admin</span>
+                    <span class="user-email" id="user-email"></span>
+                    <button class="btn btn-secondary btn-logout" onclick="handleLogout()">Sign Out</button>
+                </div>
+            </div>
+
+            <!-- OCR Panel -->
+            <div id="ocr-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Extract Text from Images & PDFs</h3>
+                        <p class="card-subtitle">Upload an image (JPG, PNG) or PDF to extract text using OCR</p>
+                    </div>
+
+                    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+                        <div class="upload-zone-icon">&#128196;</div>
+                        <h3>Drop file here or click to upload</h3>
+                        <p>Supports JPG, PNG, and PDF files</p>
+                        <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.pdf" onchange="handleFileSelect(event)">
+                    </div>
+
+                    <div class="file-preview" id="file-preview">
+                        <div class="file-info">
+                            <span class="file-icon" id="file-icon">&#128196;</span>
+                            <div class="file-details">
+                                <div class="file-name" id="file-name">document.pdf</div>
+                                <div class="file-size" id="file-size">2.4 MB</div>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="clearFile()">Remove</button>
+                        </div>
+
+                        <!-- Document Viewer with Selection -->
+                        <div class="document-viewer" id="document-viewer">
+                            <div class="viewer-toolbar">
+                                <div class="viewer-toolbar-left">
+                                    <button class="btn btn-sm btn-secondary" onclick="zoomIn()" title="Zoom In">+</button>
+                                    <button class="btn btn-sm btn-secondary" onclick="zoomOut()" title="Zoom Out">-</button>
+                                    <span class="zoom-level" id="zoom-level">100%</span>
+                                </div>
+                                <div class="viewer-toolbar-center" id="page-controls" style="display: none;">
+                                    <button class="btn btn-sm btn-secondary" onclick="prevPage()" id="prev-page-btn">&larr;</button>
+                                    <span class="page-indicator">Page <span id="current-page">1</span> of <span id="total-pages">1</span></span>
+                                    <button class="btn btn-sm btn-secondary" onclick="nextPage()" id="next-page-btn">&rarr;</button>
+                                </div>
+                                <div class="viewer-toolbar-right">
+                                    <label class="selection-mode-toggle">
+                                        <input type="checkbox" id="selection-mode" checked>
+                                        <span>Selection Mode</span>
+                                    </label>
+                                    <button class="btn btn-sm btn-secondary" onclick="clearSelection()" id="clear-selection-btn" style="display: none;">Clear Selection</button>
+                                </div>
+                            </div>
+                            <div class="viewer-hint" id="viewer-hint">
+                                Click and drag to select an area for OCR, or process the entire document
+                            </div>
+                            <div class="viewer-container" id="viewer-container">
+                                <div class="viewer-canvas-wrapper" id="viewer-canvas-wrapper">
+                                    <canvas id="viewer-canvas"></canvas>
+                                    <canvas id="selection-canvas"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ocr-actions" id="ocr-actions" style="display: none;">
+                        <div class="ocr-options-row">
+                            <button class="btn btn-primary" id="ocr-btn" onclick="performOCR(false)">Extract Full Document</button>
+                            <button class="btn btn-primary" id="ocr-selection-btn" onclick="performOCR(true)" style="display: none;">Extract Selection</button>
+                            <button class="btn btn-secondary" id="extract-tables-btn" onclick="extractTables()" style="display: none;">Extract Tables (PDF)</button>
+                            <select id="ocr-language" class="form-input" style="width: auto;">
+                                <option value="eng">English</option>
+                                <option value="spa">Spanish</option>
+                                <option value="fra">French</option>
+                                <option value="deu">German</option>
+                                <option value="chi_sim">Chinese (Simplified)</option>
+                                <option value="jpn">Japanese</option>
+                                <option value="kor">Korean</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="togglePreprocessingPanel()" id="preprocess-toggle">
+                                Preprocessing Options
+                            </button>
+                        </div>
+
+                        <!-- Preprocessing Options Panel -->
+                        <div class="preprocessing-panel" id="preprocessing-panel">
+                            <div class="preprocessing-header">
+                                <h4>Image Preprocessing</h4>
+                                <p>Enable preprocessing steps to improve OCR accuracy</p>
+                            </div>
+                            <div class="preprocessing-options">
+                                <label class="preprocessing-option">
+                                    <input type="checkbox" id="pp-grayscale" checked>
+                                    <span class="option-content">
+                                        <span class="option-name">Grayscale</span>
+                                        <span class="option-desc">Convert to grayscale to remove color noise</span>
+                                    </span>
+                                </label>
+                                <label class="preprocessing-option">
+                                    <input type="checkbox" id="pp-contrast" checked>
+                                    <span class="option-content">
+                                        <span class="option-name">Enhance Contrast</span>
+                                        <span class="option-desc">Increase contrast to make text stand out</span>
+                                    </span>
+                                    <input type="range" id="pp-contrast-level" min="1" max="3" step="0.1" value="1.5" class="option-slider">
+                                    <span class="option-value" id="pp-contrast-value">1.5x</span>
+                                </label>
+                                <label class="preprocessing-option">
+                                    <input type="checkbox" id="pp-threshold">
+                                    <span class="option-content">
+                                        <span class="option-name">Binarize (Threshold)</span>
+                                        <span class="option-desc">Convert to pure black/white for cleaner text</span>
+                                    </span>
+                                    <input type="range" id="pp-threshold-level" min="64" max="192" step="1" value="128" class="option-slider">
+                                    <span class="option-value" id="pp-threshold-value">128</span>
+                                </label>
+                                <label class="preprocessing-option">
+                                    <input type="checkbox" id="pp-sharpen">
+                                    <span class="option-content">
+                                        <span class="option-name">Sharpen</span>
+                                        <span class="option-desc">Sharpen edges to improve character definition</span>
+                                    </span>
+                                </label>
+                                <label class="preprocessing-option">
+                                    <input type="checkbox" id="pp-denoise">
+                                    <span class="option-content">
+                                        <span class="option-name">Reduce Noise</span>
+                                        <span class="option-desc">Apply blur to reduce speckles and artifacts</span>
+                                    </span>
+                                </label>
+                                <label class="preprocessing-option">
+                                    <input type="checkbox" id="pp-invert">
+                                    <span class="option-content">
+                                        <span class="option-name">Invert Colors</span>
+                                        <span class="option-desc">For light text on dark backgrounds</span>
+                                    </span>
+                                </label>
+                                <label class="preprocessing-option">
+                                    <input type="checkbox" id="pp-scale" checked>
+                                    <span class="option-content">
+                                        <span class="option-name">Upscale Image</span>
+                                        <span class="option-desc">Scale up for better resolution (slower)</span>
+                                    </span>
+                                    <select id="pp-scale-level" class="option-select">
+                                        <option value="1">1x (Original)</option>
+                                        <option value="1.5">1.5x</option>
+                                        <option value="2" selected>2x</option>
+                                        <option value="3">3x (Best quality)</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div class="preprocessing-presets">
+                                <span class="preset-label">Presets:</span>
+                                <button class="btn btn-sm btn-secondary" onclick="applyPreset('default')">Default</button>
+                                <button class="btn btn-sm btn-secondary" onclick="applyPreset('scanned')">Scanned Docs</button>
+                                <button class="btn btn-sm btn-secondary" onclick="applyPreset('photo')">Photos</button>
+                                <button class="btn btn-sm btn-secondary" onclick="applyPreset('lowquality')">Low Quality</button>
+                            </div>
+                            <div class="preprocessing-preview">
+                                <button class="btn btn-secondary btn-sm" onclick="previewPreprocessing()">Preview Preprocessing</button>
+                                <div class="preview-container" id="preview-container"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="processing-indicator" id="processing-indicator">
+                        <div class="spinner"></div>
+                        <span id="processing-status">Initializing OCR...</span>
+                    </div>
+
+                    <div class="ocr-result" id="ocr-result">
+                        <div class="ocr-result-header">
+                            <h4>Extracted Text</h4>
+                            <div class="ocr-result-actions">
+                                <button class="btn btn-secondary btn-sm" onclick="copyToClipboard()">Copy Text</button>
+                                <button class="btn btn-secondary btn-sm" onclick="showExtractionPanel()">Extract Data</button>
+                                <button class="btn btn-primary btn-sm" onclick="showSaveToTeamDialog()">Save to Team</button>
+                            </div>
+                        </div>
+                        <div class="ocr-result-text" id="ocr-result-text"></div>
+
+                        <!-- Extraction Panel -->
+                        <div class="extraction-panel" id="extraction-panel" style="display: none;">
+                            <div class="extraction-header">
+                                <h4>Extract Structured Data</h4>
+                                <div class="template-selector">
+                                    <select id="extraction-template" class="form-input">
+                                        <option value="">-- Select Template --</option>
+                                        <option value="auto">Auto-detect Document Type</option>
+                                    </select>
+                                    <button class="btn btn-primary btn-sm" onclick="runExtraction()">Extract Data</button>
+                                </div>
+                            </div>
+                            <div class="extraction-fields" id="extraction-fields">
+                                <div class="empty-state">
+                                    <p>Select a template and click "Extract Data" to extract structured information</p>
+                                </div>
+                            </div>
+                            <div class="export-buttons" id="export-buttons" style="display: none;">
+                                <button class="btn btn-secondary btn-sm" onclick="exportExtraction('json')">Export JSON</button>
+                                <button class="btn btn-secondary btn-sm" onclick="exportExtraction('csv')">Export CSV</button>
+                                <button class="btn btn-primary btn-sm" onclick="saveExtractionToTeam()">Save to Team</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Table Extraction Panel -->
+                    <div class="table-extraction-panel" id="table-extraction-panel" style="display: none;">
+                        <div class="card-header">
+                            <h4>Extracted Tables</h4>
+                            <p class="card-subtitle" id="table-count-info">Analyzing PDF...</p>
+                        </div>
+                        <div class="table-tabs" id="table-tabs"></div>
+                        <div class="table-preview-container" id="table-preview-container">
+                            <div class="loading">Extracting tables from PDF...</div>
+                        </div>
+                        <div class="table-actions" id="table-actions" style="display: none;">
+                            <button class="btn btn-secondary" onclick="exportCurrentTable('csv')">Export as CSV</button>
+                            <button class="btn btn-secondary" onclick="exportCurrentTable('json')">Export as JSON</button>
+                            <button class="btn btn-primary" onclick="saveTableToTeam()">Save to Team</button>
+                        </div>
+                    </div>
+
+                    <!-- Save to Team Dialog -->
+                    <div class="save-to-team-dialog" id="save-to-team-dialog" style="display: none;">
+                        <div class="card-header">
+                            <h4>Save Document to Team</h4>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Select Team</label>
+                            <select id="save-team-select" class="form-input" onchange="loadTeamFolders()">
+                                <option value="">-- Select a team --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Folder (optional)</label>
+                            <select id="save-folder-select" class="form-input">
+                                <option value="">Root (no folder)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Document Name</label>
+                            <input type="text" id="save-doc-name" class="form-input" placeholder="Document name">
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-secondary" onclick="hideSaveToTeamDialog()">Cancel</button>
+                            <button class="btn btn-primary" onclick="saveDocumentToTeam()">Save Document</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OCR History -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Recent Extractions</h3>
+                        <p class="card-subtitle">Your recent OCR operations (stored locally)</p>
+                    </div>
+                    <div id="ocr-history">
+                        <div class="empty-state">
+                            <p>No recent extractions</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents Panel -->
+            <div id="documents-panel" style="display: none;">
+                <!-- Team & Folder Selector -->
+                <div class="documents-toolbar">
+                    <div class="toolbar-left">
+                        <select id="docs-team-select" class="form-input" onchange="loadDocumentsForTeam()">
+                            <option value="">-- Select a team --</option>
+                        </select>
+                        <div class="breadcrumb" id="folder-breadcrumb">
+                            <span class="breadcrumb-item" onclick="navigateToFolder(null)">Root</span>
+                        </div>
+                    </div>
+                    <div class="toolbar-right">
+                        <button class="btn btn-secondary btn-sm" onclick="showCreateFolderDialog()" id="create-folder-btn" style="display: none;">
+                            New Folder
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Folders Grid -->
+                <div id="folders-container" class="folders-grid"></div>
+
+                <!-- Documents Grid -->
+                <div id="documents-container" class="documents-grid">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#128196;</div>
+                        <h3>No documents yet</h3>
+                        <p>Select a team to view documents, or save OCR results from the Scanner tab</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teams Panel -->
+            <div id="teams-panel" style="display: none;">
+                <!-- Pending Invitations -->
+                <div class="card" id="pending-invitations-card" style="display: none;">
+                    <div class="card-header">
+                        <h3 class="card-title">Pending Invitations</h3>
+                        <p class="card-subtitle">You've been invited to join these teams</p>
+                    </div>
+                    <div id="pending-invitations-list"></div>
+                </div>
+
+                <!-- Create Team Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Create New Team</h3>
+                        <p class="card-subtitle">Add a new team to organize your OCR projects</p>
+                    </div>
+                    <form class="create-team-form" onsubmit="handleCreateTeam(event)">
+                        <input type="text" id="team-name" class="form-input" placeholder="Enter team name" required>
+                        <button type="submit" class="btn btn-primary">Create Team</button>
+                    </form>
+                </div>
+
+                <!-- Teams Grid -->
+                <div id="teams-container" class="teams-grid"></div>
+            </div>
+
+            <!-- Admin Panel -->
+            <div id="admin-panel" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">User Management</h3>
+                        <p class="card-subtitle">View and manage all registered users</p>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>User ID</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <tr>
+                                    <td colspan="4" class="table-loading">Loading users...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- System Health -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">System Health</h3>
+                        <p class="card-subtitle">Monitor system status and connectivity</p>
+                    </div>
+                    <div class="health-grid">
+                        <div class="health-item" id="health-api">
+                            <div class="health-indicator"></div>
+                            <div class="health-label">API Server</div>
+                            <div class="health-status">Checking...</div>
+                        </div>
+                        <div class="health-item" id="health-db">
+                            <div class="health-indicator"></div>
+                            <div class="health-label">Database</div>
+                            <div class="health-status">Checking...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="modal-overlay" class="modal-overlay" onclick="closeModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">Confirm Action</h3>
+            </div>
+            <div class="modal-body">
+                <p id="modal-message">Are you sure you want to proceed?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-danger" id="modal-confirm-btn" onclick="confirmModalAction()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Detail Modal -->
+    <div id="team-detail-modal" class="modal-overlay" onclick="closeTeamDetail()">
+        <div class="modal team-detail-modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="team-detail-title">Team Details</h3>
+                <button class="btn-icon" onclick="closeTeamDetail()" style="font-size: 1.5rem; opacity: 0.7;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Invite Member -->
+                <div class="team-section" id="invite-section">
+                    <h4>Invite Member</h4>
+                    <form class="invite-form" onsubmit="handleInviteMember(event)">
+                        <input type="email" id="invite-email" class="form-input" placeholder="Enter email address" required>
+                        <button type="submit" class="btn btn-primary">Send Invite</button>
+                    </form>
+                </div>
+
+                <!-- Team Members -->
+                <div class="team-section">
+                    <h4>Team Members</h4>
+                    <div id="team-members-list" class="members-list"></div>
+                </div>
+
+                <!-- Pending Invitations for this team -->
+                <div class="team-section" id="team-invitations-section">
+                    <h4>Pending Invitations</h4>
+                    <div id="team-invitations-list" class="invitations-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>Skyght Enterprise OCR Platform</p>
+    </footer>
+
+    <script>
+        // Initialize PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        let token = localStorage.getItem('skyght_token') || '';
+        let userEmail = localStorage.getItem('skyght_email') || '';
+        let userRole = localStorage.getItem('skyght_role') || 'user';
+        let modalCallback = null;
+        let selectedFile = null;
+        let ocrHistory = JSON.parse(localStorage.getItem('skyght_ocr_history') || '[]');
+        let pendingInviteToken = null;
+        let unverifiedEmail = null;
+
+        // Handle URL parameters
+        async function handleUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const verifyToken = urlParams.get('verify');
+            const inviteToken = urlParams.get('invite');
+
+            // Handle email verification
+            if (verifyToken) {
+                await handleEmailVerification(verifyToken);
+                // Clear the URL parameter
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            // Handle invitation link
+            if (inviteToken) {
+                await handleInviteLink(inviteToken);
+            }
+        }
+
+        async function handleEmailVerification(verifyToken) {
+            try {
+                const res = await fetch('api/auth/verify-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: verifyToken })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    showAlert(data.message || 'Email verified successfully!', 'success');
+                } else {
+                    showAlert(data.error || 'Verification failed', 'error');
+                }
+            } catch (err) {
+                showAlert('Verification failed. Please try again.', 'error');
+            }
+        }
+
+        async function handleInviteLink(inviteToken) {
+            try {
+                const res = await fetch(`api/teams/invitations/check/${inviteToken}`);
+                const data = await res.json();
+
+                if (res.ok) {
+                    pendingInviteToken = inviteToken;
+                    document.getElementById('invite-team-name').textContent = data.team_name;
+                    document.getElementById('invite-from').textContent = data.invited_by;
+                    document.getElementById('invitation-info').style.display = 'block';
+
+                    // If already logged in, prompt to accept
+                    if (token) {
+                        if (confirm(`Accept invitation to join ${data.team_name}?`)) {
+                            await acceptInvitationFromUrl(inviteToken);
+                        }
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
+                } else {
+                    showAlert(data.error || 'Invalid invitation link', 'error');
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            } catch (err) {
+                showAlert('Could not load invitation details', 'error');
+            }
+        }
+
+        async function acceptInvitationFromUrl(inviteToken) {
+            try {
+                const res = await fetch('api/teams/invitations/accept', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ token: inviteToken })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    alert('Invitation accepted! You are now a team member.');
+                    loadTeams();
+                    switchDashboardTab('teams');
+                } else {
+                    alert(data.error || 'Could not accept invitation');
+                }
+            } catch (err) {
+                alert('Error accepting invitation');
+            }
+            pendingInviteToken = null;
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        async function resendVerification() {
+            if (!unverifiedEmail) {
+                showAlert('Please enter your email and try to sign in first.', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('api/auth/resend-verification', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: unverifiedEmail })
+                });
+
+                const data = await res.json();
+                showAlert(data.message || 'Verification email sent!', 'success');
+            } catch (err) {
+                showAlert('Failed to resend verification email', 'error');
+            }
+        }
+
+        // Initialize on page load
+        handleUrlParams();
+
+        // Check if already logged in
+        if (token) {
+            showDashboard();
+            loadTeams();
+            renderOCRHistory();
+        }
+
+        // Preprocessing panel toggle
+        function togglePreprocessingPanel() {
+            const panel = document.getElementById('preprocessing-panel');
+            panel.classList.toggle('active');
+        }
+
+        // Update slider value displays
+        document.getElementById('pp-contrast-level').addEventListener('input', (e) => {
+            document.getElementById('pp-contrast-value').textContent = e.target.value + 'x';
+        });
+        document.getElementById('pp-threshold-level').addEventListener('input', (e) => {
+            document.getElementById('pp-threshold-value').textContent = e.target.value;
+        });
+
+        // Preprocessing presets
+        function applyPreset(preset) {
+            const checkboxes = {
+                grayscale: document.getElementById('pp-grayscale'),
+                contrast: document.getElementById('pp-contrast'),
+                threshold: document.getElementById('pp-threshold'),
+                sharpen: document.getElementById('pp-sharpen'),
+                denoise: document.getElementById('pp-denoise'),
+                invert: document.getElementById('pp-invert'),
+                scale: document.getElementById('pp-scale')
+            };
+            const contrastLevel = document.getElementById('pp-contrast-level');
+            const thresholdLevel = document.getElementById('pp-threshold-level');
+            const scaleLevel = document.getElementById('pp-scale-level');
+
+            // Reset all
+            Object.values(checkboxes).forEach(cb => cb.checked = false);
+
+            switch (preset) {
+                case 'default':
+                    checkboxes.grayscale.checked = true;
+                    checkboxes.contrast.checked = true;
+                    checkboxes.scale.checked = true;
+                    contrastLevel.value = 1.5;
+                    scaleLevel.value = '2';
+                    break;
+                case 'scanned':
+                    checkboxes.grayscale.checked = true;
+                    checkboxes.contrast.checked = true;
+                    checkboxes.threshold.checked = true;
+                    checkboxes.scale.checked = true;
+                    contrastLevel.value = 1.3;
+                    thresholdLevel.value = 140;
+                    scaleLevel.value = '2';
+                    break;
+                case 'photo':
+                    checkboxes.grayscale.checked = true;
+                    checkboxes.contrast.checked = true;
+                    checkboxes.sharpen.checked = true;
+                    checkboxes.scale.checked = true;
+                    contrastLevel.value = 1.4;
+                    scaleLevel.value = '2';
+                    break;
+                case 'lowquality':
+                    checkboxes.grayscale.checked = true;
+                    checkboxes.contrast.checked = true;
+                    checkboxes.denoise.checked = true;
+                    checkboxes.sharpen.checked = true;
+                    checkboxes.scale.checked = true;
+                    contrastLevel.value = 1.8;
+                    scaleLevel.value = '3';
+                    break;
+            }
+
+            // Update displayed values
+            document.getElementById('pp-contrast-value').textContent = contrastLevel.value + 'x';
+            document.getElementById('pp-threshold-value').textContent = thresholdLevel.value;
+        }
+
+        // Get current preprocessing options
+        function getPreprocessingOptions() {
+            return {
+                grayscale: document.getElementById('pp-grayscale').checked,
+                contrast: document.getElementById('pp-contrast').checked,
+                contrastLevel: parseFloat(document.getElementById('pp-contrast-level').value),
+                threshold: document.getElementById('pp-threshold').checked,
+                thresholdLevel: parseInt(document.getElementById('pp-threshold-level').value),
+                sharpen: document.getElementById('pp-sharpen').checked,
+                denoise: document.getElementById('pp-denoise').checked,
+                invert: document.getElementById('pp-invert').checked,
+                scale: document.getElementById('pp-scale').checked,
+                scaleLevel: parseFloat(document.getElementById('pp-scale-level').value)
+            };
+        }
+
+        // Image preprocessing functions
+        async function preprocessImage(imageSource, options) {
+            return new Promise(async (resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+
+                img.onload = () => {
+                    let scale = options.scale ? options.scaleLevel : 1;
+                    let canvas = document.createElement('canvas');
+                    let ctx = canvas.getContext('2d');
+
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    let data = imageData.data;
+
+                    // Apply grayscale
+                    if (options.grayscale) {
+                        for (let i = 0; i < data.length; i += 4) {
+                            const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+                            data[i] = data[i + 1] = data[i + 2] = gray;
+                        }
+                    }
+
+                    // Apply contrast
+                    if (options.contrast) {
+                        const factor = options.contrastLevel;
+                        for (let i = 0; i < data.length; i += 4) {
+                            data[i] = Math.min(255, Math.max(0, ((data[i] - 128) * factor) + 128));
+                            data[i + 1] = Math.min(255, Math.max(0, ((data[i + 1] - 128) * factor) + 128));
+                            data[i + 2] = Math.min(255, Math.max(0, ((data[i + 2] - 128) * factor) + 128));
+                        }
+                    }
+
+                    // Apply denoise (simple box blur)
+                    if (options.denoise) {
+                        imageData = applyBoxBlur(imageData, canvas.width, canvas.height);
+                        data = imageData.data;
+                    }
+
+                    // Apply threshold (binarization)
+                    if (options.threshold) {
+                        const thresh = options.thresholdLevel;
+                        for (let i = 0; i < data.length; i += 4) {
+                            const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                            const val = avg > thresh ? 255 : 0;
+                            data[i] = data[i + 1] = data[i + 2] = val;
+                        }
+                    }
+
+                    // Apply sharpen
+                    if (options.sharpen) {
+                        imageData = applySharpen(imageData, canvas.width, canvas.height);
+                        data = imageData.data;
+                    }
+
+                    // Apply invert
+                    if (options.invert) {
+                        for (let i = 0; i < data.length; i += 4) {
+                            data[i] = 255 - data[i];
+                            data[i + 1] = 255 - data[i + 1];
+                            data[i + 2] = 255 - data[i + 2];
+                        }
+                    }
+
+                    ctx.putImageData(imageData, 0, 0);
+                    resolve(canvas.toDataURL('image/png'));
+                };
+
+                // Handle different image source types
+                if (typeof imageSource === 'string') {
+                    img.src = imageSource;
+                } else if (imageSource instanceof File || imageSource instanceof Blob) {
+                    img.src = URL.createObjectURL(imageSource);
+                } else {
+                    img.src = imageSource;
+                }
+            });
+        }
+
+        // Box blur for noise reduction
+        function applyBoxBlur(imageData, width, height) {
+            const data = imageData.data;
+            const output = new Uint8ClampedArray(data);
+            const radius = 1;
+
+            for (let y = radius; y < height - radius; y++) {
+                for (let x = radius; x < width - radius; x++) {
+                    for (let c = 0; c < 3; c++) {
+                        let sum = 0;
+                        let count = 0;
+                        for (let dy = -radius; dy <= radius; dy++) {
+                            for (let dx = -radius; dx <= radius; dx++) {
+                                const idx = ((y + dy) * width + (x + dx)) * 4 + c;
+                                sum += data[idx];
+                                count++;
+                            }
+                        }
+                        output[(y * width + x) * 4 + c] = sum / count;
+                    }
+                }
+            }
+
+            return new ImageData(output, width, height);
+        }
+
+        // Sharpen filter
+        function applySharpen(imageData, width, height) {
+            const data = imageData.data;
+            const output = new Uint8ClampedArray(data);
+            const kernel = [
+                0, -1, 0,
+                -1, 5, -1,
+                0, -1, 0
+            ];
+
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    for (let c = 0; c < 3; c++) {
+                        let sum = 0;
+                        for (let ky = -1; ky <= 1; ky++) {
+                            for (let kx = -1; kx <= 1; kx++) {
+                                const idx = ((y + ky) * width + (x + kx)) * 4 + c;
+                                sum += data[idx] * kernel[(ky + 1) * 3 + (kx + 1)];
+                            }
+                        }
+                        output[(y * width + x) * 4 + c] = Math.min(255, Math.max(0, sum));
+                    }
+                }
+            }
+
+            return new ImageData(output, width, height);
+        }
+
+        // Preview preprocessing
+        async function previewPreprocessing() {
+            if (!selectedFile) {
+                alert('Please select a file first');
+                return;
+            }
+
+            const container = document.getElementById('preview-container');
+            container.innerHTML = '<div style="text-align: center; padding: 1rem; color: var(--text-light);">Generating preview...</div>';
+            container.classList.add('active');
+
+            try {
+                let originalSrc;
+                if (selectedFile.type === 'application/pdf') {
+                    const images = await pdfToImages(selectedFile, 1); // Just first page
+                    originalSrc = images[0];
+                } else {
+                    originalSrc = URL.createObjectURL(selectedFile);
+                }
+
+                const options = getPreprocessingOptions();
+                const processedSrc = await preprocessImage(originalSrc, options);
+
+                container.innerHTML = `
+                    <div class="preview-images">
+                        <div class="preview-image-wrapper">
+                            <h5>Original</h5>
+                            <img src="${originalSrc}" alt="Original">
+                        </div>
+                        <div class="preview-image-wrapper">
+                            <h5>Preprocessed</h5>
+                            <img src="${processedSrc}" alt="Preprocessed">
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                container.innerHTML = '<div style="text-align: center; padding: 1rem; color: var(--danger);">Error generating preview</div>';
+                console.error('Preview error:', err);
+            }
+        }
+
+        // Document viewer state
+        let viewerZoom = 1;
+        let currentPdfPage = 1;
+        let totalPdfPages = 1;
+        let pdfDocument = null;
+        let viewerImageData = null;
+        let selection = null;
+        let isSelecting = false;
+        let selectionStart = { x: 0, y: 0 };
+
+        const viewerCanvas = document.getElementById('viewer-canvas');
+        const selectionCanvas = document.getElementById('selection-canvas');
+        const viewerCtx = viewerCanvas.getContext('2d');
+        const selectionCtx = selectionCanvas.getContext('2d');
+
+        // Initialize selection canvas events
+        function initSelectionCanvas() {
+            selectionCanvas.addEventListener('mousedown', startSelection);
+            selectionCanvas.addEventListener('mousemove', updateSelection);
+            selectionCanvas.addEventListener('mouseup', endSelection);
+            selectionCanvas.addEventListener('mouseleave', endSelection);
+
+            // Touch support
+            selectionCanvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                startSelection({ clientX: touch.clientX, clientY: touch.clientY });
+            });
+            selectionCanvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                updateSelection({ clientX: touch.clientX, clientY: touch.clientY });
+            });
+            selectionCanvas.addEventListener('touchend', endSelection);
+        }
+
+        function startSelection(e) {
+            if (!document.getElementById('selection-mode').checked) return;
+
+            const rect = selectionCanvas.getBoundingClientRect();
+            const scaleX = selectionCanvas.width / rect.width;
+            const scaleY = selectionCanvas.height / rect.height;
+
+            isSelecting = true;
+            selectionStart = {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+            selection = null;
+            updateSelectionUI();
+        }
+
+        function updateSelection(e) {
+            if (!isSelecting) return;
+
+            const rect = selectionCanvas.getBoundingClientRect();
+            const scaleX = selectionCanvas.width / rect.width;
+            const scaleY = selectionCanvas.height / rect.height;
+
+            const currentX = (e.clientX - rect.left) * scaleX;
+            const currentY = (e.clientY - rect.top) * scaleY;
+
+            selection = {
+                x: Math.min(selectionStart.x, currentX),
+                y: Math.min(selectionStart.y, currentY),
+                width: Math.abs(currentX - selectionStart.x),
+                height: Math.abs(currentY - selectionStart.y)
+            };
+
+            drawSelection();
+        }
+
+        function endSelection() {
+            if (!isSelecting) return;
+            isSelecting = false;
+
+            // Minimum selection size
+            if (selection && (selection.width < 10 || selection.height < 10)) {
+                selection = null;
+            }
+
+            updateSelectionUI();
+        }
+
+        function drawSelection() {
+            selectionCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
+
+            if (selection) {
+                // Draw semi-transparent overlay outside selection
+                selectionCtx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                selectionCtx.fillRect(0, 0, selectionCanvas.width, selectionCanvas.height);
+
+                // Clear the selection area
+                selectionCtx.clearRect(selection.x, selection.y, selection.width, selection.height);
+
+                // Draw selection border
+                selectionCtx.strokeStyle = '#2563eb';
+                selectionCtx.lineWidth = 2;
+                selectionCtx.setLineDash([5, 5]);
+                selectionCtx.strokeRect(selection.x, selection.y, selection.width, selection.height);
+
+                // Draw corner handles
+                selectionCtx.fillStyle = '#2563eb';
+                const handleSize = 8;
+                const corners = [
+                    { x: selection.x, y: selection.y },
+                    { x: selection.x + selection.width, y: selection.y },
+                    { x: selection.x, y: selection.y + selection.height },
+                    { x: selection.x + selection.width, y: selection.y + selection.height }
+                ];
+                corners.forEach(corner => {
+                    selectionCtx.fillRect(corner.x - handleSize/2, corner.y - handleSize/2, handleSize, handleSize);
+                });
+
+                // Draw selection dimensions
+                selectionCtx.fillStyle = '#2563eb';
+                selectionCtx.font = '12px sans-serif';
+                selectionCtx.setLineDash([]);
+                const dimText = `${Math.round(selection.width)} x ${Math.round(selection.height)}`;
+                selectionCtx.fillText(dimText, selection.x + 5, selection.y + selection.height - 5);
+            }
+        }
+
+        function clearSelection() {
+            selection = null;
+            selectionCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
+            updateSelectionUI();
+        }
+
+        function updateSelectionUI() {
+            const selectionBtn = document.getElementById('ocr-selection-btn');
+            const clearBtn = document.getElementById('clear-selection-btn');
+            const hint = document.getElementById('viewer-hint');
+
+            if (selection) {
+                selectionBtn.style.display = 'inline-flex';
+                clearBtn.style.display = 'inline-flex';
+                hint.textContent = 'Selection active - click "Extract Selection" to OCR just this area';
+                hint.style.background = 'rgba(37, 99, 235, 0.2)';
+            } else {
+                selectionBtn.style.display = 'none';
+                clearBtn.style.display = 'none';
+                hint.textContent = 'Click and drag to select an area for OCR, or process the entire document';
+                hint.style.background = 'rgba(37, 99, 235, 0.1)';
+            }
+        }
+
+        // Load image/PDF into viewer
+        async function loadIntoViewer(file) {
+            const viewer = document.getElementById('document-viewer');
+            viewer.style.display = 'block';
+
+            if (file.type === 'application/pdf') {
+                await loadPdfIntoViewer(file);
+            } else {
+                await loadImageIntoViewer(file);
+            }
+
+            initSelectionCanvas();
+            clearSelection();
+        }
+
+        async function loadImageIntoViewer(file) {
+            document.getElementById('page-controls').style.display = 'none';
+            pdfDocument = null;
+
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    viewerImageData = img;
+                    renderViewer();
+                    resolve();
+                };
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        async function loadPdfIntoViewer(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            pdfDocument = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            totalPdfPages = pdfDocument.numPages;
+            currentPdfPage = 1;
+
+            document.getElementById('page-controls').style.display = 'flex';
+            document.getElementById('total-pages').textContent = totalPdfPages;
+
+            await renderPdfPage();
+        }
+
+        async function renderPdfPage() {
+            if (!pdfDocument) return;
+
+            const page = await pdfDocument.getPage(currentPdfPage);
+            const scale = 1.5;
+            const viewport = page.getViewport({ scale });
+
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = viewport.width;
+            tempCanvas.height = viewport.height;
+
+            await page.render({
+                canvasContext: tempCtx,
+                viewport: viewport
+            }).promise;
+
+            // Store as image data
+            const img = new Image();
+            img.onload = () => {
+                viewerImageData = img;
+                renderViewer();
+            };
+            img.src = tempCanvas.toDataURL();
+
+            document.getElementById('current-page').textContent = currentPdfPage;
+            document.getElementById('prev-page-btn').disabled = currentPdfPage <= 1;
+            document.getElementById('next-page-btn').disabled = currentPdfPage >= totalPdfPages;
+        }
+
+        function renderViewer() {
+            if (!viewerImageData) return;
+
+            const width = viewerImageData.width * viewerZoom;
+            const height = viewerImageData.height * viewerZoom;
+
+            viewerCanvas.width = width;
+            viewerCanvas.height = height;
+            selectionCanvas.width = width;
+            selectionCanvas.height = height;
+
+            viewerCtx.drawImage(viewerImageData, 0, 0, width, height);
+
+            // Redraw selection if exists (scale with zoom)
+            if (selection) {
+                drawSelection();
+            }
+
+            document.getElementById('zoom-level').textContent = Math.round(viewerZoom * 100) + '%';
+        }
+
+        function zoomIn() {
+            viewerZoom = Math.min(3, viewerZoom + 0.25);
+            renderViewer();
+        }
+
+        function zoomOut() {
+            viewerZoom = Math.max(0.25, viewerZoom - 0.25);
+            renderViewer();
+        }
+
+        function prevPage() {
+            if (currentPdfPage > 1) {
+                currentPdfPage--;
+                clearSelection();
+                renderPdfPage();
+            }
+        }
+
+        function nextPage() {
+            if (currentPdfPage < totalPdfPages) {
+                currentPdfPage++;
+                clearSelection();
+                renderPdfPage();
+            }
+        }
+
+        // Get selected region as image data URL
+        function getSelectionImageData() {
+            if (!selection || !viewerImageData) return null;
+
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // Convert selection coordinates back to original image scale
+            const scaleX = viewerImageData.width / viewerCanvas.width;
+            const scaleY = viewerImageData.height / viewerCanvas.height;
+
+            const origX = selection.x * scaleX;
+            const origY = selection.y * scaleY;
+            const origWidth = selection.width * scaleX;
+            const origHeight = selection.height * scaleY;
+
+            tempCanvas.width = origWidth;
+            tempCanvas.height = origHeight;
+
+            tempCtx.drawImage(
+                viewerImageData,
+                origX, origY, origWidth, origHeight,
+                0, 0, origWidth, origHeight
+            );
+
+            return tempCanvas.toDataURL('image/png');
+        }
+
+        // Drag and drop handlers
+        const uploadZone = document.getElementById('upload-zone');
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please upload a JPG, PNG, or PDF file.');
+                return;
+            }
+
+            selectedFile = file;
+            viewerZoom = 1; // Reset zoom
+
+            // Store PDF file for table extraction
+            if (file.type === 'application/pdf') {
+                currentPdfFile = file;
+                document.getElementById('extract-tables-btn').style.display = 'inline-block';
+            } else {
+                currentPdfFile = null;
+                document.getElementById('extract-tables-btn').style.display = 'none';
+            }
+
+            // Hide table extraction panel when loading new file
+            document.getElementById('table-extraction-panel').style.display = 'none';
+            extractedTables = [];
+
+            // Update preview
+            document.getElementById('file-name').textContent = file.name;
+            document.getElementById('file-size').textContent = formatFileSize(file.size);
+            document.getElementById('file-icon').textContent = file.type === 'application/pdf' ? '&#128196;' : '&#128247;';
+            document.getElementById('file-preview').classList.add('active');
+            document.getElementById('ocr-actions').style.display = 'flex';
+            document.getElementById('ocr-result').classList.remove('active');
+
+            // Load into viewer
+            loadIntoViewer(file);
+        }
+
+        function clearFile() {
+            selectedFile = null;
+            pdfDocument = null;
+            viewerImageData = null;
+            selection = null;
+            currentPdfFile = null;
+            extractedTables = [];
+            document.getElementById('file-input').value = '';
+            document.getElementById('file-preview').classList.remove('active');
+            document.getElementById('ocr-actions').style.display = 'none';
+            document.getElementById('ocr-result').classList.remove('active');
+            document.getElementById('document-viewer').style.display = 'none';
+            document.getElementById('table-extraction-panel').style.display = 'none';
+            document.getElementById('extract-tables-btn').style.display = 'none';
+        }
+
+        async function performOCR(selectionOnly = false) {
+            if (!selectedFile) return;
+
+            const language = document.getElementById('ocr-language').value;
+            const processingIndicator = document.getElementById('processing-indicator');
+            const processingStatus = document.getElementById('processing-status');
+            const ocrBtn = document.getElementById('ocr-btn');
+            const ocrSelectionBtn = document.getElementById('ocr-selection-btn');
+            const options = getPreprocessingOptions();
+
+            ocrBtn.disabled = true;
+            ocrSelectionBtn.disabled = true;
+            processingIndicator.classList.add('active');
+
+            try {
+                let imagesToProcess = [];
+
+                if (selectionOnly && selection) {
+                    // Process only the selected region
+                    processingStatus.textContent = 'Extracting selection...';
+                    const selectionImage = getSelectionImageData();
+                    if (selectionImage) {
+                        imagesToProcess = [selectionImage];
+                    } else {
+                        throw new Error('Could not extract selection');
+                    }
+                } else if (selectedFile.type === 'application/pdf') {
+                    processingStatus.textContent = 'Loading PDF...';
+                    imagesToProcess = await pdfToImages(selectedFile);
+                } else {
+                    imagesToProcess = [selectedFile];
+                }
+
+                let fullText = '';
+
+                for (let i = 0; i < imagesToProcess.length; i++) {
+                    // Preprocess the image
+                    processingStatus.textContent = `Preprocessing ${selectionOnly ? 'selection' : 'page ' + (i + 1) + ' of ' + imagesToProcess.length}...`;
+                    const processedImage = await preprocessImage(imagesToProcess[i], options);
+
+                    // Run OCR on preprocessed image
+                    processingStatus.textContent = `OCR ${selectionOnly ? 'selection' : 'page ' + (i + 1) + ' of ' + imagesToProcess.length}...`;
+
+                    const result = await Tesseract.recognize(processedImage, language, {
+                        logger: (m) => {
+                            if (m.status === 'recognizing text') {
+                                const percent = Math.round(m.progress * 100);
+                                if (selectionOnly) {
+                                    processingStatus.textContent = `OCR selection: ${percent}%`;
+                                } else {
+                                    processingStatus.textContent = `Page ${i + 1}/${imagesToProcess.length}: OCR ${percent}%`;
+                                }
+                            }
+                        }
+                    });
+
+                    fullText += result.data.text;
+                    if (i < imagesToProcess.length - 1) {
+                        fullText += '\n\n--- Page ' + (i + 2) + ' ---\n\n';
+                    }
+                }
+
+                // Display result
+                const resultLabel = selectionOnly ? ' (Selection)' : '';
+                document.getElementById('ocr-result-text').textContent = fullText || 'No text found in the image.';
+                document.getElementById('ocr-result').classList.add('active');
+
+                // Save to history
+                saveToHistory(selectedFile.name + resultLabel, fullText);
+
+            } catch (err) {
+                console.error('OCR Error:', err);
+                alert('Error performing OCR: ' + err.message);
+            } finally {
+                processingIndicator.classList.remove('active');
+                ocrBtn.disabled = false;
+                ocrSelectionBtn.disabled = false;
+            }
+        }
+
+        async function pdfToImages(pdfFile, maxPages = null) {
+            const images = [];
+            const arrayBuffer = await pdfFile.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+            const pagesToProcess = maxPages ? Math.min(pdf.numPages, maxPages) : pdf.numPages;
+
+            for (let i = 1; i <= pagesToProcess; i++) {
+                const page = await pdf.getPage(i);
+                const scale = 3; // Increased from 2 for better quality
+                const viewport = page.getViewport({ scale });
+
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                }).promise;
+
+                images.push(canvas.toDataURL('image/png'));
+            }
+
+            return images;
+        }
+
+        function saveToHistory(fileName, text) {
+            const entry = {
+                id: Date.now(),
+                fileName: fileName,
+                text: text.substring(0, 500),
+                fullText: text,
+                date: new Date().toISOString()
+            };
+
+            ocrHistory.unshift(entry);
+            if (ocrHistory.length > 10) {
+                ocrHistory = ocrHistory.slice(0, 10);
+            }
+
+            localStorage.setItem('skyght_ocr_history', JSON.stringify(ocrHistory));
+            renderOCRHistory();
+        }
+
+        function renderOCRHistory() {
+            const container = document.getElementById('ocr-history');
+
+            if (ocrHistory.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No recent extractions</p></div>';
+                return;
+            }
+
+            container.innerHTML = ocrHistory.map(entry => `
+                <div class="team-card" style="margin-bottom: 1rem; cursor: pointer;" onclick="showHistoryEntry(${entry.id})">
+                    <div class="team-card-header">
+                        <div class="team-name">${escapeHtml(entry.fileName)}</div>
+                        <button class="btn-icon" onclick="event.stopPropagation(); deleteHistoryEntry(${entry.id})" title="Delete">
+                            <span class="icon-delete">&#128465;</span>
+                        </button>
+                    </div>
+                    <div class="team-meta">${formatDate(entry.date)}</div>
+                    <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        ${escapeHtml(entry.text.substring(0, 100))}...
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showHistoryEntry(id) {
+            const entry = ocrHistory.find(e => e.id === id);
+            if (entry) {
+                document.getElementById('ocr-result-text').textContent = entry.fullText;
+                document.getElementById('ocr-result').classList.add('active');
+            }
+        }
+
+        function deleteHistoryEntry(id) {
+            ocrHistory = ocrHistory.filter(e => e.id !== id);
+            localStorage.setItem('skyght_ocr_history', JSON.stringify(ocrHistory));
+            renderOCRHistory();
+        }
+
+        function copyToClipboard() {
+            const text = document.getElementById('ocr-result-text').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Text copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+
+        // Extraction functionality
+        let extractionTemplates = [];
+        let currentExtraction = null;
+
+        async function loadExtractionTemplates() {
+            try {
+                const response = await fetch('/api/extraction/templates', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await response.json();
+                if (data.templates) {
+                    extractionTemplates = data.templates;
+                    const select = document.getElementById('extraction-template');
+                    // Keep auto-detect option
+                    select.innerHTML = '<option value="">-- Select Template --</option><option value="auto">Auto-detect Document Type</option>';
+                    extractionTemplates.forEach(t => {
+                        const option = document.createElement('option');
+                        option.value = t.id;
+                        option.textContent = t.name + (t.is_system ? ' (Built-in)' : '');
+                        select.appendChild(option);
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to load extraction templates:', err);
+            }
+        }
+
+        function showExtractionPanel() {
+            const panel = document.getElementById('extraction-panel');
+            panel.style.display = 'block';
+            loadExtractionTemplates();
+        }
+
+        function hideExtractionPanel() {
+            document.getElementById('extraction-panel').style.display = 'none';
+        }
+
+        async function runExtraction() {
+            const templateId = document.getElementById('extraction-template').value;
+            const ocrText = document.getElementById('ocr-result-text').textContent;
+
+            if (!ocrText || ocrText === 'No text found in the image.') {
+                alert('No OCR text available. Please perform OCR first.');
+                return;
+            }
+
+            const fieldsContainer = document.getElementById('extraction-fields');
+            fieldsContainer.innerHTML = '<div class="loading">Extracting data...</div>';
+
+            try {
+                let endpoint = '/api/extraction/extract';
+                let body = { text: ocrText };
+
+                if (templateId === 'auto') {
+                    endpoint = '/api/extraction/extract/auto';
+                } else if (templateId) {
+                    body.template_id = templateId;
+                } else {
+                    alert('Please select a template or use auto-detect.');
+                    fieldsContainer.innerHTML = '<div class="empty-state"><p>Select a template and click "Extract Data"</p></div>';
+                    return;
+                }
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    fieldsContainer.innerHTML = `<div class="error-message">${data.error}</div>`;
+                    return;
+                }
+
+                currentExtraction = data;
+                displayExtractedFields(data);
+                document.getElementById('export-buttons').style.display = 'flex';
+
+            } catch (err) {
+                console.error('Extraction failed:', err);
+                fieldsContainer.innerHTML = '<div class="error-message">Extraction failed. Please try again.</div>';
+            }
+        }
+
+        function displayExtractedFields(data) {
+            const container = document.getElementById('extraction-fields');
+            const fields = data.extracted_fields || data.fields || {};
+            const templateName = typeof data.template === 'string' ? data.template : (data.template?.name || null);
+
+            if (Object.keys(fields).length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No structured data could be extracted. Try a different template.</p></div>';
+                return;
+            }
+
+            let html = '';
+
+            if (templateName) {
+                html += `<div class="extraction-template-info">Template: <strong>${templateName}</strong></div>`;
+            }
+
+            if (data.detected_type) {
+                html += `<div class="extraction-template-info">Detected Type: <strong>${data.detected_type}</strong></div>`;
+            }
+
+            html += '<div class="extraction-fields-grid">';
+
+            // Extract line_items separately
+            let lineItems = null;
+
+            for (const [key, fieldData] of Object.entries(fields)) {
+                // Handle line_items specially
+                if (key === 'line_items' && fieldData && fieldData.type === 'table') {
+                    lineItems = fieldData.value;
+                    continue;
+                }
+
+                const value = typeof fieldData === 'object' ? fieldData.value : fieldData;
+                const confidence = typeof fieldData === 'object' ? fieldData.confidence : null;
+                const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+                // Skip if value is an array (multiple matches)
+                const displayValue = Array.isArray(value) ? value[0] : value;
+                const hasValue = displayValue && displayValue !== '';
+                const confidenceClass = confidence ? (confidence > 0.8 ? 'high' : confidence > 0.5 ? 'medium' : 'low') : '';
+
+                html += `
+                    <div class="extraction-field ${hasValue ? 'has-value' : ''}">
+                        <label class="field-label">${label}</label>
+                        <input type="text" class="form-input field-input"
+                               data-field="${key}"
+                               value="${displayValue || ''}"
+                               onchange="updateExtractionField('${key}', this.value)">
+                        ${confidence ? `<span class="field-confidence ${confidenceClass}">${Math.round(confidence * 100)}%</span>` : ''}
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+
+            // Show line items if present
+            if (lineItems && lineItems.length > 0) {
+                html += '<div class="line-items-section"><h5>Line Items</h5><table class="line-items-table"><thead><tr>';
+                const headers = Object.keys(lineItems[0]);
+                headers.forEach(h => {
+                    html += `<th>${h.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</th>`;
+                });
+                html += '</tr></thead><tbody>';
+                lineItems.forEach(item => {
+                    html += '<tr>';
+                    headers.forEach(h => {
+                        html += `<td>${item[h] || ''}</td>`;
+                    });
+                    html += '</tr>';
+                });
+                html += '</tbody></table></div>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        function updateExtractionField(fieldName, value) {
+            if (!currentExtraction) return;
+
+            const fields = currentExtraction.extracted_fields || currentExtraction.fields;
+            if (fields) {
+                if (typeof fields[fieldName] === 'object') {
+                    fields[fieldName].value = value;
+                } else {
+                    fields[fieldName] = value;
+                }
+            }
+        }
+
+        async function exportExtraction(format) {
+            if (!currentExtraction) {
+                alert('No extraction data available.');
+                return;
+            }
+
+            try {
+                const endpoint = format === 'json' ? '/api/extraction/export/json' : '/api/extraction/export/csv';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        extractions: [currentExtraction]
+                    })
+                });
+
+                if (format === 'json') {
+                    const data = await response.json();
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    downloadBlob(blob, 'extraction.json');
+                } else {
+                    const text = await response.text();
+                    const blob = new Blob([text], { type: 'text/csv' });
+                    downloadBlob(blob, 'extraction.csv');
+                }
+            } catch (err) {
+                console.error('Export failed:', err);
+                alert('Export failed. Please try again.');
+            }
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        async function saveExtractionToTeam() {
+            if (!currentExtraction) {
+                alert('No extraction data available.');
+                return;
+            }
+            // Use the existing save to team dialog, but include extraction data
+            showSaveToTeamDialog();
+        }
+
+        // ============== Table Extraction ==============
+
+        let extractedTables = [];
+        let currentTableIndex = 0;
+        let currentPdfFile = null;
+
+        async function extractTables() {
+            if (!currentPdfFile) {
+                alert('Please upload a PDF file first.');
+                return;
+            }
+
+            const panel = document.getElementById('table-extraction-panel');
+            const container = document.getElementById('table-preview-container');
+            const countInfo = document.getElementById('table-count-info');
+            const actions = document.getElementById('table-actions');
+            const tabs = document.getElementById('table-tabs');
+
+            panel.style.display = 'block';
+            container.innerHTML = '<div class="loading">Extracting tables from PDF...</div>';
+            countInfo.textContent = 'Analyzing PDF...';
+            actions.style.display = 'none';
+            tabs.innerHTML = '';
+
+            const formData = new FormData();
+            formData.append('file', currentPdfFile);
+
+            try {
+                const response = await fetch('/api/extraction/tables', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    container.innerHTML = `<div class="error-message">${data.error}</div>`;
+                    countInfo.textContent = 'Extraction failed';
+                    return;
+                }
+
+                extractedTables = data.tables || [];
+
+                if (extractedTables.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>No tables found in this PDF. The document may not contain structured tables, or they may be formatted as images.</p></div>';
+                    countInfo.textContent = 'No tables found';
+                    return;
+                }
+
+                countInfo.textContent = `Found ${extractedTables.length} table(s)`;
+
+                // Create tabs for multiple tables
+                if (extractedTables.length > 1) {
+                    extractedTables.forEach((table, idx) => {
+                        const tab = document.createElement('button');
+                        tab.className = `table-tab ${idx === 0 ? 'active' : ''}`;
+                        tab.textContent = `Table ${idx + 1} (Page ${table.page})`;
+                        tab.onclick = () => showTable(idx);
+                        tabs.appendChild(tab);
+                    });
+                }
+
+                // Show first table
+                currentTableIndex = 0;
+                showTable(0);
+                actions.style.display = 'flex';
+
+            } catch (err) {
+                console.error('Table extraction failed:', err);
+                container.innerHTML = '<div class="error-message">Table extraction failed. Please try again.</div>';
+                countInfo.textContent = 'Extraction failed';
+            }
+        }
+
+        function showTable(index) {
+            currentTableIndex = index;
+            const table = extractedTables[index];
+
+            if (!table) return;
+
+            // Update tab active state
+            const tabs = document.querySelectorAll('.table-tab');
+            tabs.forEach((tab, idx) => {
+                tab.classList.toggle('active', idx === index);
+            });
+
+            const container = document.getElementById('table-preview-container');
+            const headers = table.headers || [];
+            const rows = table.rows || [];
+
+            let html = `
+                <div class="table-info">
+                    <span>Page ${table.page}</span>
+                    <span>${rows.length} rows</span>
+                    <span>${headers.length} columns</span>
+                </div>
+                <div class="table-scroll">
+                    <table class="extracted-table">
+                        <thead>
+                            <tr>
+                                ${headers.map(h => `<th title="${h.key}">${h.label}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            rows.forEach((row, rowIdx) => {
+                const isSummary = row._is_summary;
+                html += `<tr class="${isSummary ? 'summary-row' : ''}">`;
+                headers.forEach(h => {
+                    const value = row[h.key] || '';
+                    html += `<td><input type="text" class="table-cell-input" data-row="${rowIdx}" data-col="${h.key}" value="${escapeHtml(value)}"></td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+
+            // Add edit handlers
+            container.querySelectorAll('.table-cell-input').forEach(input => {
+                input.addEventListener('change', function() {
+                    const rowIdx = parseInt(this.dataset.row);
+                    const colKey = this.dataset.col;
+                    if (extractedTables[currentTableIndex] && extractedTables[currentTableIndex].rows[rowIdx]) {
+                        extractedTables[currentTableIndex].rows[rowIdx][colKey] = this.value;
+                    }
+                });
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML.replace(/"/g, '&quot;');
+        }
+
+        async function exportCurrentTable(format) {
+            const table = extractedTables[currentTableIndex];
+            if (!table) {
+                alert('No table selected.');
+                return;
+            }
+
+            if (format === 'csv') {
+                try {
+                    const response = await fetch('/api/extraction/tables/export/csv', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({
+                            table: table,
+                            filename: `table_page${table.page}`
+                        })
+                    });
+
+                    const text = await response.text();
+                    const blob = new Blob([text], { type: 'text/csv' });
+                    downloadBlob(blob, `table_page${table.page}.csv`);
+                } catch (err) {
+                    console.error('Export failed:', err);
+                    alert('Export failed. Please try again.');
+                }
+            } else if (format === 'json') {
+                // Clean table for export
+                const exportData = {
+                    headers: table.headers.map(h => h.label),
+                    rows: table.rows.filter(r => !r._is_summary).map(row => {
+                        const cleanRow = {};
+                        table.headers.forEach(h => {
+                            cleanRow[h.label] = row[h.key] || '';
+                        });
+                        return cleanRow;
+                    })
+                };
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                downloadBlob(blob, `table_page${table.page}.json`);
+            }
+        }
+
+        async function saveTableToTeam() {
+            const table = extractedTables[currentTableIndex];
+            if (!table) {
+                alert('No table selected.');
+                return;
+            }
+            // TODO: Implement save to team with table data
+            alert('Table save functionality will be integrated with the team documents system.');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function switchTab(tab) {
+            const tabs = document.querySelectorAll('.auth-tab');
+            tabs.forEach(t => t.classList.remove('active'));
+
+            if (tab === 'login') {
+                tabs[0].classList.add('active');
+                document.getElementById('login-form').style.display = 'block';
+                document.getElementById('register-form').style.display = 'none';
+            } else {
+                tabs[1].classList.add('active');
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('register-form').style.display = 'block';
+            }
+            clearAlerts();
+        }
+
+        function switchDashboardTab(tab) {
+            document.querySelectorAll('.dashboard-tab').forEach(t => t.classList.remove('active'));
+
+            document.getElementById('ocr-panel').style.display = 'none';
+            document.getElementById('documents-panel').style.display = 'none';
+            document.getElementById('teams-panel').style.display = 'none';
+            document.getElementById('admin-panel').style.display = 'none';
+
+            if (tab === 'ocr') {
+                document.getElementById('tab-ocr').classList.add('active');
+                document.getElementById('ocr-panel').style.display = 'block';
+                document.getElementById('dashboard-title').textContent = 'OCR Scanner';
+            } else if (tab === 'documents') {
+                document.getElementById('tab-documents').classList.add('active');
+                document.getElementById('documents-panel').style.display = 'block';
+                document.getElementById('dashboard-title').textContent = 'Documents';
+                loadDocumentsPanel();
+            } else if (tab === 'teams') {
+                document.getElementById('tab-teams').classList.add('active');
+                document.getElementById('teams-panel').style.display = 'block';
+                document.getElementById('dashboard-title').textContent = 'Your Teams';
+                loadTeams();
+            } else if (tab === 'admin') {
+                document.getElementById('tab-admin').classList.add('active');
+                document.getElementById('admin-panel').style.display = 'block';
+                document.getElementById('dashboard-title').textContent = 'Admin Panel';
+                loadAdminData();
+            }
+        }
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alert-container');
+            container.innerHTML = `<div class="alert alert-${type}">${escapeHtml(message)}</div>`;
+            setTimeout(clearAlerts, 5000);
+        }
+
+        function clearAlerts() {
+            document.getElementById('alert-container').innerHTML = '';
+        }
+
+        function showDashboard() {
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('dashboard-section').classList.add('active');
+            document.getElementById('user-email').textContent = userEmail;
+
+            // Show admin tab if user is admin
+            if (userRole === 'admin') {
+                document.getElementById('tab-admin').style.display = 'inline-block';
+                document.getElementById('user-role-badge').style.display = 'inline-block';
+            }
+
+            document.getElementById('nav-links').innerHTML = `
+                <span style="color: rgba(255,255,255,0.9);">${escapeHtml(userEmail)}</span>
+                <a href="#" onclick="handleLogout()">Sign Out</a>
+            `;
+        }
+
+        function showAuth() {
+            document.getElementById('auth-section').style.display = 'block';
+            document.getElementById('dashboard-section').classList.remove('active');
+            document.getElementById('nav-links').innerHTML = `
+                <a href="#" onclick="showAuth()">Sign In</a>
+            `;
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            // Hide verification section
+            document.getElementById('verification-required').style.display = 'none';
+
+            try {
+                const res = await fetch('api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    // Check if email verification is required
+                    if (data.requiresVerification) {
+                        unverifiedEmail = data.email || email;
+                        document.getElementById('verification-required').style.display = 'block';
+                        showAlert('Please verify your email before signing in.', 'error');
+                        return;
+                    }
+                    throw new Error(data.error || 'Login failed');
+                }
+
+                token = data.token;
+                userEmail = email;
+
+                // Decode token to get role
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                userRole = payload.role || 'user';
+
+                localStorage.setItem('skyght_token', token);
+                localStorage.setItem('skyght_email', email);
+                localStorage.setItem('skyght_role', userRole);
+
+                showDashboard();
+                renderOCRHistory();
+
+                // Handle pending invitation after login
+                if (pendingInviteToken) {
+                    await acceptInvitationFromUrl(pendingInviteToken);
+                }
+            } catch (err) {
+                showAlert(err.message, 'error');
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const confirm = document.getElementById('register-confirm').value;
+
+            if (password !== confirm) {
+                showAlert('Passwords do not match', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || 'Registration failed');
+                }
+
+                // Show verification message
+                if (data.requiresVerification) {
+                    showAlert(data.message || 'Account created! Please check your email to verify your account.', 'success');
+                    unverifiedEmail = email;
+                    document.getElementById('verification-required').style.display = 'block';
+                } else {
+                    showAlert('Account created successfully! Please sign in.', 'success');
+                }
+
+                switchTab('login');
+                document.getElementById('login-email').value = email;
+            } catch (err) {
+                showAlert(err.message, 'error');
+            }
+        }
+
+        function handleLogout() {
+            token = '';
+            userEmail = '';
+            userRole = 'user';
+            localStorage.removeItem('skyght_token');
+            localStorage.removeItem('skyght_email');
+            localStorage.removeItem('skyght_role');
+            showAuth();
+            document.getElementById('login-email').value = '';
+            document.getElementById('login-password').value = '';
+            document.getElementById('tab-admin').style.display = 'none';
+            document.getElementById('user-role-badge').style.display = 'none';
+            switchDashboardTab('ocr');
+        }
+
+        let currentTeamId = null;
+        let currentTeamIsOwner = false;
+
+        async function loadTeams() {
+            try {
+                // Load teams and pending invitations in parallel
+                const [teamsRes, invitationsRes] = await Promise.all([
+                    fetch('api/teams', { headers: { 'Authorization': 'Bearer ' + token } }),
+                    fetch('api/teams/invitations/pending', { headers: { 'Authorization': 'Bearer ' + token } })
+                ]);
+
+                if (!teamsRes.ok) {
+                    if (teamsRes.status === 401) {
+                        handleLogout();
+                        return;
+                    }
+                    throw new Error('Failed to load teams');
+                }
+
+                const teams = await teamsRes.json();
+                renderTeams(teams);
+
+                if (invitationsRes.ok) {
+                    const invitations = await invitationsRes.json();
+                    renderPendingInvitations(invitations);
+                }
+            } catch (err) {
+                console.error('Error loading teams:', err);
+            }
+        }
+
+        function renderPendingInvitations(invitations) {
+            const card = document.getElementById('pending-invitations-card');
+            const list = document.getElementById('pending-invitations-list');
+
+            if (invitations.length === 0) {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = 'block';
+            list.innerHTML = invitations.map(inv => `
+                <div class="pending-invitation-item">
+                    <div class="pending-invitation-info">
+                        <h4>${escapeHtml(inv.team_name)}</h4>
+                        <p>Invited by ${escapeHtml(inv.invited_by)}</p>
+                    </div>
+                    <div class="pending-invitation-actions">
+                        <button class="btn btn-primary btn-sm" onclick="acceptInvitation('${inv.token}')">Accept</button>
+                        <button class="btn btn-secondary btn-sm" onclick="declineInvitation('${inv.token}')">Decline</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function acceptInvitation(token_value) {
+            try {
+                const res = await fetch('api/teams/invitations/accept', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ token: token_value })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to accept invitation');
+
+                alert('Invitation accepted! You are now a team member.');
+                loadTeams();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function declineInvitation(token_value) {
+            try {
+                const res = await fetch('api/teams/invitations/decline', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ token: token_value })
+                });
+
+                if (!res.ok) throw new Error('Failed to decline invitation');
+                loadTeams();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        function renderTeams(teams) {
+            const container = document.getElementById('teams-container');
+
+            if (teams.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#128193;</div>
+                        <h3>No teams yet</h3>
+                        <p>Create your first team to get started</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = teams.map(team => {
+                const isOwner = team.membership_role === 'owner';
+                const memberCount = (team.member_count || 0) + 1; // +1 for owner
+                const safeName = escapeHtml(team.name).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                return `
+                <div class="team-card" data-team-id="${team.id}" data-team-name="${escapeHtml(team.name)}" data-is-owner="${isOwner}">
+                    <div class="team-card-header">
+                        <div>
+                            <span class="team-name">${escapeHtml(team.name)}</span>
+                            <span class="membership-badge">${isOwner ? 'Owner' : 'Member'}</span>
+                        </div>
+                        ${isOwner ? `
+                            <button class="btn-icon" onclick="event.stopPropagation(); confirmDeleteTeam('${team.id}', '${safeName}')" title="Delete team">
+                                <span class="icon-delete">&#128465;</span>
+                            </button>
+                        ` : ''}
+                    </div>
+                    <div class="team-meta">Created ${formatDate(team.created_at)}</div>
+                    <div class="member-count">${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
+                    <div class="team-card-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="openTeamDetailFromCard(this)">
+                            ${isOwner ? 'Manage Team' : 'View Members'}
+                        </button>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function openTeamDetailFromCard(btn) {
+            const card = btn.closest('.team-card');
+            const teamId = card.dataset.teamId;
+            const teamName = card.dataset.teamName;
+            const isOwner = card.dataset.isOwner === 'true';
+            openTeamDetail(teamId, teamName, isOwner);
+        }
+
+        async function openTeamDetail(teamId, teamName, isOwner) {
+            currentTeamId = teamId;
+            currentTeamIsOwner = isOwner;
+
+            document.getElementById('team-detail-title').textContent = teamName;
+            document.getElementById('team-detail-modal').classList.add('active');
+
+            // Show/hide invite section based on ownership
+            document.getElementById('invite-section').style.display = isOwner ? 'block' : 'none';
+            document.getElementById('team-invitations-section').style.display = isOwner ? 'block' : 'none';
+
+            await loadTeamMembers(teamId);
+            if (isOwner) {
+                await loadTeamInvitations(teamId);
+            }
+        }
+
+        function closeTeamDetail() {
+            document.getElementById('team-detail-modal').classList.remove('active');
+            currentTeamId = null;
+        }
+
+        async function loadTeamMembers(teamId) {
+            const list = document.getElementById('team-members-list');
+            list.innerHTML = '<div style="text-align: center; color: var(--text-light);">Loading...</div>';
+
+            try {
+                const res = await fetch(`api/teams/${teamId}/members`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!res.ok) throw new Error('Failed to load members');
+
+                const members = await res.json();
+                renderTeamMembers(members, teamId);
+            } catch (err) {
+                list.innerHTML = '<div style="color: var(--danger);">Failed to load members</div>';
+            }
+        }
+
+        function renderTeamMembers(members, teamId) {
+            const list = document.getElementById('team-members-list');
+
+            if (members.length === 0) {
+                list.innerHTML = '<div style="color: var(--text-light);">No members yet</div>';
+                return;
+            }
+
+            list.innerHTML = members.map(member => {
+                const initial = member.email.charAt(0).toUpperCase();
+                const isOwner = member.role === 'owner';
+                const canRemove = currentTeamIsOwner && !isOwner;
+
+                return `
+                <div class="member-item">
+                    <div class="member-info">
+                        <div class="member-avatar">${initial}</div>
+                        <div class="member-details">
+                            <span class="member-email">${escapeHtml(member.email)}</span>
+                            <span class="member-role">${member.role}</span>
+                        </div>
+                    </div>
+                    ${canRemove ? `
+                        <button class="btn btn-sm btn-secondary" onclick="removeMember('${teamId}', '${member.id}', '${escapeHtml(member.email)}')">
+                            Remove
+                        </button>
+                    ` : ''}
+                </div>
+            `}).join('');
+        }
+
+        async function loadTeamInvitations(teamId) {
+            const list = document.getElementById('team-invitations-list');
+
+            try {
+                const res = await fetch(`api/teams/${teamId}/invitations`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!res.ok) throw new Error('Failed to load invitations');
+
+                const invitations = await res.json();
+                renderTeamInvitations(invitations, teamId);
+            } catch (err) {
+                list.innerHTML = '<div style="color: var(--danger);">Failed to load invitations</div>';
+            }
+        }
+
+        function renderTeamInvitations(invitations, teamId) {
+            const list = document.getElementById('team-invitations-list');
+
+            const pending = invitations.filter(i => i.status === 'pending');
+            if (pending.length === 0) {
+                list.innerHTML = '<div style="color: var(--text-light);">No pending invitations</div>';
+                return;
+            }
+
+            list.innerHTML = pending.map(inv => {
+                const isExpired = new Date(inv.expires_at) < new Date();
+                return `
+                <div class="invitation-item">
+                    <div class="invitation-info">
+                        <span class="invitation-email">${escapeHtml(inv.email)}</span>
+                        <span class="invitation-status ${isExpired ? 'expired' : ''}">${isExpired ? 'Expired' : 'Pending'}</span>
+                    </div>
+                    <button class="btn btn-sm btn-secondary" onclick="cancelInvitation('${teamId}', '${inv.id}')">
+                        Cancel
+                    </button>
+                </div>
+            `}).join('');
+        }
+
+        async function handleInviteMember(e) {
+            e.preventDefault();
+            const emailInput = document.getElementById('invite-email');
+            const email = emailInput.value.trim();
+
+            if (!email || !currentTeamId) return;
+
+            try {
+                const res = await fetch(`api/teams/${currentTeamId}/invite`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to send invitation');
+
+                emailInput.value = '';
+                alert(data.message);
+                loadTeamInvitations(currentTeamId);
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function removeMember(teamId, userId, email) {
+            if (!confirm(`Remove ${email} from the team?`)) return;
+
+            try {
+                const res = await fetch(`api/teams/${teamId}/members/${userId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!res.ok) throw new Error('Failed to remove member');
+
+                loadTeamMembers(teamId);
+                loadTeams();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function cancelInvitation(teamId, inviteId) {
+            try {
+                const res = await fetch(`api/teams/${teamId}/invitations/${inviteId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!res.ok) throw new Error('Failed to cancel invitation');
+                loadTeamInvitations(teamId);
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function handleCreateTeam(e) {
+            e.preventDefault();
+            const nameInput = document.getElementById('team-name');
+            const name = nameInput.value.trim();
+
+            if (!name) return;
+
+            try {
+                const res = await fetch('api/teams', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ name })
+                });
+
+                if (!res.ok) {
+                    throw new Error('Failed to create team');
+                }
+
+                nameInput.value = '';
+                loadTeams();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        function confirmDeleteTeam(teamId, teamName) {
+            showModal(
+                'Delete Team',
+                `Are you sure you want to delete the team "${teamName}"? This action cannot be undone.`,
+                () => deleteTeam(teamId)
+            );
+        }
+
+        async function deleteTeam(teamId) {
+            try {
+                const res = await fetch(`api/teams/${teamId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!res.ok) {
+                    throw new Error('Failed to delete team');
+                }
+
+                loadTeams();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        // ============== Document Management ==============
+
+        let currentDocsFolderId = null;
+        let currentDocsTeamId = null;
+        let currentDocsTeamRole = null;
+        let userTeamsCache = [];
+
+        async function loadDocumentsPanel() {
+            // Load teams for the selector
+            try {
+                const res = await fetch('api/teams', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    userTeamsCache = await res.json();
+                    populateTeamSelectors();
+
+                    // Auto-select first team if available
+                    if (userTeamsCache.length > 0 && !currentDocsTeamId) {
+                        document.getElementById('docs-team-select').value = userTeamsCache[0].id;
+                        loadDocumentsForTeam();
+                    }
+                }
+            } catch (err) {
+                console.error('Error loading teams:', err);
+            }
+        }
+
+        function populateTeamSelectors() {
+            const docsSelect = document.getElementById('docs-team-select');
+            const saveSelect = document.getElementById('save-team-select');
+
+            const options = userTeamsCache.map(t =>
+                `<option value="${t.id}">${escapeHtml(t.name)}</option>`
+            ).join('');
+
+            docsSelect.innerHTML = '<option value="">-- Select a team --</option>' + options;
+            saveSelect.innerHTML = '<option value="">-- Select a team --</option>' + options;
+
+            // Restore selection if exists
+            if (currentDocsTeamId) {
+                docsSelect.value = currentDocsTeamId;
+            }
+        }
+
+        async function loadDocumentsForTeam() {
+            const teamId = document.getElementById('docs-team-select').value;
+            if (!teamId) {
+                document.getElementById('folders-container').innerHTML = '';
+                document.getElementById('documents-container').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#128196;</div>
+                        <h3>Select a team</h3>
+                        <p>Choose a team to view its documents</p>
+                    </div>
+                `;
+                document.getElementById('create-folder-btn').style.display = 'none';
+                return;
+            }
+
+            currentDocsTeamId = teamId;
+            currentDocsFolderId = null;
+
+            // Get user's role in this team
+            const team = userTeamsCache.find(t => t.id === teamId);
+            currentDocsTeamRole = team ? team.membership_role : null;
+
+            // Show create folder button if user can edit
+            const canEdit = ['owner', 'admin', 'editor'].includes(currentDocsTeamRole);
+            document.getElementById('create-folder-btn').style.display = canEdit ? 'inline-flex' : 'none';
+
+            updateBreadcrumb([]);
+            await loadFoldersAndDocuments(teamId, null);
+        }
+
+        async function loadFoldersAndDocuments(teamId, folderId) {
+            try {
+                const folderParam = folderId ? `?parent_id=${folderId}` : '';
+                const docFolderParam = folderId ? `?folder_id=${folderId}` : '';
+
+                const [foldersRes, docsRes] = await Promise.all([
+                    fetch(`api/documents/team/${teamId}/folders${folderParam}`, {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    }),
+                    fetch(`api/documents/team/${teamId}${docFolderParam}`, {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    })
+                ]);
+
+                if (foldersRes.ok && docsRes.ok) {
+                    const folders = await foldersRes.json();
+                    const documents = await docsRes.json();
+                    renderFolders(folders);
+                    renderDocuments(documents);
+                } else {
+                    throw new Error('Failed to load documents');
+                }
+            } catch (err) {
+                console.error('Error loading documents:', err);
+                document.getElementById('documents-container').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#9888;</div>
+                        <h3>Error loading documents</h3>
+                        <p>${escapeHtml(err.message)}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderFolders(folders) {
+            const container = document.getElementById('folders-container');
+
+            if (folders.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = folders.map(folder => `
+                <div class="folder-card" onclick="navigateToFolder('${folder.id}', '${escapeHtml(folder.name).replace(/'/g, "\\'")}')">
+                    <div class="folder-icon">&#128193;</div>
+                    <div class="folder-info">
+                        <div class="folder-name">${escapeHtml(folder.name)}</div>
+                        <div class="folder-meta">${folder.document_count || 0} docs, ${folder.subfolder_count || 0} folders</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderDocuments(documents) {
+            const container = document.getElementById('documents-container');
+
+            if (documents.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#128196;</div>
+                        <h3>No documents here</h3>
+                        <p>Save OCR results from the Scanner tab to add documents</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const canEdit = ['owner', 'admin', 'editor'].includes(currentDocsTeamRole);
+
+            container.innerHTML = documents.map(doc => `
+                <div class="document-card">
+                    <div class="document-card-header">
+                        <div class="document-name">${escapeHtml(doc.filename)}</div>
+                    </div>
+                    <div class="document-meta">
+                        ${doc.uploaded_by_email ? `By ${escapeHtml(doc.uploaded_by_email)} • ` : ''}
+                        ${formatDate(doc.created_at)}
+                        ${doc.ocr_language ? ` • ${doc.ocr_language.toUpperCase()}` : ''}
+                    </div>
+                    <div class="document-preview">${escapeHtml((doc.ocr_text || '').substring(0, 200))}...</div>
+                    <div class="document-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="viewDocument('${doc.id}')">View</button>
+                        <button class="btn btn-secondary btn-sm" onclick="copyDocumentText('${doc.id}')">Copy</button>
+                        ${canEdit ? `<button class="btn btn-secondary btn-sm" onclick="deleteDocument('${doc.id}')">Delete</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        let folderPath = [];
+
+        function navigateToFolder(folderId, folderName) {
+            if (folderId === null) {
+                // Go to root
+                folderPath = [];
+                currentDocsFolderId = null;
+            } else {
+                // Add to path
+                folderPath.push({ id: folderId, name: folderName });
+                currentDocsFolderId = folderId;
+            }
+
+            updateBreadcrumb(folderPath);
+            loadFoldersAndDocuments(currentDocsTeamId, currentDocsFolderId);
+        }
+
+        function navigateToBreadcrumb(index) {
+            if (index < 0) {
+                folderPath = [];
+                currentDocsFolderId = null;
+            } else {
+                folderPath = folderPath.slice(0, index + 1);
+                currentDocsFolderId = folderPath[index].id;
+            }
+
+            updateBreadcrumb(folderPath);
+            loadFoldersAndDocuments(currentDocsTeamId, currentDocsFolderId);
+        }
+
+        function updateBreadcrumb(path) {
+            const container = document.getElementById('folder-breadcrumb');
+            let html = `<span class="breadcrumb-item" onclick="navigateToBreadcrumb(-1)">Root</span>`;
+
+            path.forEach((folder, index) => {
+                html += `<span class="breadcrumb-separator">/</span>`;
+                html += `<span class="breadcrumb-item" onclick="navigateToBreadcrumb(${index})">${escapeHtml(folder.name)}</span>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        async function viewDocument(docId) {
+            try {
+                const res = await fetch(`api/documents/${docId}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!res.ok) throw new Error('Failed to load document');
+
+                const doc = await res.json();
+                showDocumentModal(doc);
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        function showDocumentModal(doc) {
+            const modalHtml = `
+                <div id="document-view-modal" class="modal-overlay active" onclick="closeDocumentModal()">
+                    <div class="modal document-view-modal" onclick="event.stopPropagation()">
+                        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3 class="modal-title">${escapeHtml(doc.filename)}</h3>
+                            <button class="btn-icon" onclick="closeDocumentModal()" style="font-size: 1.5rem;">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="document-meta" style="margin-bottom: 1rem;">
+                                ${doc.uploaded_by_email ? `Uploaded by ${escapeHtml(doc.uploaded_by_email)} • ` : ''}
+                                ${formatDate(doc.created_at)}
+                                ${doc.ocr_language ? ` • Language: ${doc.ocr_language.toUpperCase()}` : ''}
+                            </div>
+                            <div class="document-text-content">${escapeHtml(doc.ocr_text || 'No text content')}</div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeDocumentModal()">Close</button>
+                            <button class="btn btn-primary" onclick="copyDocumentTextDirect('${escapeHtml(doc.ocr_text || '').replace(/'/g, "\\'")}')">Copy Text</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        function closeDocumentModal() {
+            const modal = document.getElementById('document-view-modal');
+            if (modal) modal.remove();
+        }
+
+        async function copyDocumentText(docId) {
+            try {
+                const res = await fetch(`api/documents/${docId}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!res.ok) throw new Error('Failed to load document');
+
+                const doc = await res.json();
+                await navigator.clipboard.writeText(doc.ocr_text || '');
+                alert('Text copied to clipboard!');
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        function copyDocumentTextDirect(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Text copied to clipboard!');
+            });
+        }
+
+        async function deleteDocument(docId) {
+            if (!confirm('Delete this document? This cannot be undone.')) return;
+
+            try {
+                const res = await fetch(`api/documents/${docId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!res.ok) throw new Error('Failed to delete document');
+
+                loadFoldersAndDocuments(currentDocsTeamId, currentDocsFolderId);
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        function showCreateFolderDialog() {
+            const html = `
+                <div id="create-folder-overlay" class="modal-overlay active" onclick="hideCreateFolderDialog()">
+                    <div class="modal" onclick="event.stopPropagation()" style="max-width: 400px;">
+                        <div class="modal-header">
+                            <h3 class="modal-title">Create Folder</h3>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label class="form-label">Folder Name</label>
+                                <input type="text" id="new-folder-name" class="form-input" placeholder="Enter folder name">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="hideCreateFolderDialog()">Cancel</button>
+                            <button class="btn btn-primary" onclick="createFolder()">Create</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+            document.getElementById('new-folder-name').focus();
+        }
+
+        function hideCreateFolderDialog() {
+            const overlay = document.getElementById('create-folder-overlay');
+            if (overlay) overlay.remove();
+        }
+
+        async function createFolder() {
+            const name = document.getElementById('new-folder-name').value.trim();
+            if (!name) {
+                alert('Please enter a folder name');
+                return;
+            }
+
+            try {
+                const res = await fetch(`api/documents/team/${currentDocsTeamId}/folders`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        parent_id: currentDocsFolderId
+                    })
+                });
+
+                if (!res.ok) throw new Error('Failed to create folder');
+
+                hideCreateFolderDialog();
+                loadFoldersAndDocuments(currentDocsTeamId, currentDocsFolderId);
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        // ============== Save OCR to Team ==============
+
+        function showSaveToTeamDialog() {
+            const dialog = document.getElementById('save-to-team-dialog');
+            dialog.style.display = 'block';
+
+            // Populate teams
+            populateTeamSelectors();
+
+            // Set default filename
+            if (selectedFile) {
+                document.getElementById('save-doc-name').value = selectedFile.name;
+            }
+        }
+
+        function hideSaveToTeamDialog() {
+            document.getElementById('save-to-team-dialog').style.display = 'none';
+        }
+
+        async function loadTeamFolders() {
+            const teamId = document.getElementById('save-team-select').value;
+            const folderSelect = document.getElementById('save-folder-select');
+
+            if (!teamId) {
+                folderSelect.innerHTML = '<option value="">Root (no folder)</option>';
+                return;
+            }
+
+            try {
+                const res = await fetch(`api/documents/team/${teamId}/folders`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (res.ok) {
+                    const folders = await res.json();
+                    folderSelect.innerHTML = '<option value="">Root (no folder)</option>' +
+                        folders.map(f => `<option value="${f.id}">${escapeHtml(f.name)}</option>`).join('');
+                }
+            } catch (err) {
+                console.error('Error loading folders:', err);
+            }
+        }
+
+        async function saveDocumentToTeam() {
+            const teamId = document.getElementById('save-team-select').value;
+            const folderId = document.getElementById('save-folder-select').value;
+            const docName = document.getElementById('save-doc-name').value.trim();
+            const ocrText = document.getElementById('ocr-result-text').textContent;
+
+            if (!teamId) {
+                alert('Please select a team');
+                return;
+            }
+
+            if (!docName) {
+                alert('Please enter a document name');
+                return;
+            }
+
+            if (!ocrText) {
+                alert('No OCR text to save');
+                return;
+            }
+
+            try {
+                const res = await fetch(`api/documents/team/${teamId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        filename: docName,
+                        ocr_text: ocrText,
+                        file_type: selectedFile ? selectedFile.type : null,
+                        file_size: selectedFile ? selectedFile.size : null,
+                        ocr_language: document.getElementById('ocr-language').value,
+                        preprocessing_options: getPreprocessingOptions(),
+                        folder_id: folderId || null
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to save document');
+
+                alert('Document saved successfully!');
+                hideSaveToTeamDialog();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        // Admin functions
+        async function loadAdminData() {
+            await Promise.all([loadUsers(), checkHealth()]);
+        }
+
+        async function loadUsers() {
+            const tbody = document.getElementById('users-table-body');
+
+            try {
+                const res = await fetch('api/admin/users', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!res.ok) {
+                    if (res.status === 403) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="table-error">Access denied. Admin privileges required.</td></tr>';
+                        return;
+                    }
+                    throw new Error('Failed to load users');
+                }
+
+                const users = await res.json();
+                renderUsers(users);
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="4" class="table-error">${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        function renderUsers(users) {
+            const tbody = document.getElementById('users-table-body');
+
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="table-empty">No users found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td>${escapeHtml(user.email)}</td>
+                    <td><span class="role-badge role-${user.role}">${user.role}</span></td>
+                    <td class="user-id">${user.id.substring(0, 8)}...</td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="toggleUserRole('${user.id}', '${user.role}')" ${user.email === userEmail ? 'disabled' : ''}>
+                            ${user.role === 'admin' ? 'Demote' : 'Promote'}
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function toggleUserRole(userId, currentRole) {
+            const newRole = currentRole === 'admin' ? 'user' : 'admin';
+
+            try {
+                const res = await fetch(`api/admin/users/${userId}/role`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ role: newRole })
+                });
+
+                if (!res.ok) {
+                    throw new Error('Failed to update user role');
+                }
+
+                loadUsers();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function checkHealth() {
+            const apiHealth = document.getElementById('health-api');
+            const dbHealth = document.getElementById('health-db');
+
+            try {
+                const res = await fetch('api/health');
+                const data = await res.json();
+
+                if (res.ok) {
+                    apiHealth.className = 'health-item health-ok';
+                    apiHealth.querySelector('.health-status').textContent = 'Operational';
+
+                    dbHealth.className = 'health-item health-ok';
+                    dbHealth.querySelector('.health-status').textContent = 'Connected';
+                } else {
+                    throw new Error('Health check failed');
+                }
+            } catch (err) {
+                apiHealth.className = 'health-item health-error';
+                apiHealth.querySelector('.health-status').textContent = 'Error';
+
+                dbHealth.className = 'health-item health-unknown';
+                dbHealth.querySelector('.health-status').textContent = 'Unknown';
+            }
+        }
+
+        // Modal functions
+        function showModal(title, message, callback) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            document.getElementById('modal-overlay').classList.add('active');
+            modalCallback = callback;
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.remove('active');
+            modalCallback = null;
+        }
+
+        function confirmModalAction() {
+            if (modalCallback) {
+                modalCallback();
+            }
+            closeModal();
+        }
+
+        // Utility functions
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
