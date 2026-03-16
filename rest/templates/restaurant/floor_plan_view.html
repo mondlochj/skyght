@@ -1,0 +1,689 @@
+{% extends "base.html" %}
+{% block title %}Mesas - {{ g.current_business.business_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2><i class="bi bi-grid-3x3-gap me-2"></i>Estado de Mesas</h2>
+    <p class="text-muted mb-0">Vista operativa - clic en una mesa para cambiar su estado</p>
+  </div>
+  <div class="btn-group">
+    <a href="{{ url_for('restaurant.floor_plan_edit', room_id=plan.id) }}" class="btn btn-outline-secondary">
+      <i class="bi bi-pencil me-1"></i>Editar Plano
+    </a>
+  </div>
+</div>
+
+<!-- Room selector -->
+{% if rooms|length > 1 %}
+<div class="mb-3">
+  <div class="btn-group" role="group">
+    {% for room in rooms %}
+    <a href="{{ url_for('restaurant.floor_plan_view', room_id=room.id) }}"
+       class="btn btn-{% if room.id == plan.id %}primary{% else %}outline-primary{% endif %}">
+      {{ room.name }}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="row">
+  <!-- Canvas Area -->
+  <div class="col-lg-9">
+    <div class="card">
+      <div class="card-body p-2">
+        <div id="canvasContainer" style="border: 2px solid #dee2e6; border-radius: 8px; overflow: auto; background: #e5e7eb;">
+          <canvas id="floorCanvas" width="{{ plan.canvas_width }}" height="{{ plan.canvas_height }}"></canvas>
+        </div>
+      </div>
+      <div class="card-footer py-2">
+        <div class="d-flex justify-content-between align-items-center small">
+          <div>
+            <span class="badge bg-success me-1"><i class="bi bi-check-lg"></i> Disponible</span>
+            <span class="badge bg-danger me-1"><i class="bi bi-person-fill"></i> Ocupada</span>
+            <span class="badge bg-warning me-1"><i class="bi bi-clock-fill"></i> Reservada</span>
+            <span class="badge bg-secondary"><i class="bi bi-droplet"></i> Sucia</span>
+          </div>
+          <div>
+            <span class="text-muted">Clic en mesa para cambiar estado</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table Info Panel -->
+  <div class="col-lg-3">
+    <div class="card mb-3">
+      <div class="card-header py-2">
+        <small class="fw-bold"><i class="bi bi-bar-chart me-1"></i>Resumen</small>
+      </div>
+      <div class="card-body py-2">
+        <div class="row text-center">
+          <div class="col-6 mb-2">
+            <div class="h4 mb-0 text-success" id="availableCount">0</div>
+            <small class="text-muted">Disponibles</small>
+          </div>
+          <div class="col-6 mb-2">
+            <div class="h4 mb-0 text-danger" id="occupiedCount">0</div>
+            <small class="text-muted">Ocupadas</small>
+          </div>
+          <div class="col-6">
+            <div class="h4 mb-0 text-warning" id="reservedCount">0</div>
+            <small class="text-muted">Reservadas</small>
+          </div>
+          <div class="col-6">
+            <div class="h4 mb-0 text-secondary" id="dirtyCount">0</div>
+            <small class="text-muted">Sucias</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Selected Table Panel -->
+    <div class="card" id="tablePanel" style="display: none;">
+      <div class="card-header py-2">
+        <small class="fw-bold"><i class="bi bi-table me-1"></i>Mesa <span id="selectedTableNumber"></span></small>
+      </div>
+      <div class="card-body py-2">
+        <div id="selectedTableLabel" class="text-muted small mb-2"></div>
+
+        <!-- Seat count with +/- controls -->
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <small class="text-muted">Asientos:</small>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-secondary" onclick="removeSeat()" title="Quitar asiento">
+              <i class="bi bi-dash"></i>
+            </button>
+            <span class="btn btn-outline-secondary disabled" id="seatCountDisplay" style="min-width: 40px;">0</span>
+            <button class="btn btn-outline-secondary" onclick="addSeat()" title="Agregar asiento">
+              <i class="bi bi-plus"></i>
+            </button>
+          </div>
+        </div>
+
+        <hr class="my-2">
+        <label class="form-label small mb-1">Estado de mesa:</label>
+        <div class="btn-group btn-group-sm w-100 mb-2">
+          <button class="btn btn-success" onclick="setTableStatus('available')" title="Disponible">
+            <i class="bi bi-check-lg"></i>
+          </button>
+          <button class="btn btn-danger" onclick="setTableStatus('occupied')" title="Ocupada">
+            <i class="bi bi-person-fill"></i>
+          </button>
+          <button class="btn btn-warning" onclick="setTableStatus('reserved')" title="Reservada">
+            <i class="bi bi-clock-fill"></i>
+          </button>
+          <button class="btn btn-secondary" onclick="setTableStatus('dirty')" title="Sucia">
+            <i class="bi bi-droplet"></i>
+          </button>
+        </div>
+
+        <hr class="my-2">
+        <label class="form-label small mb-1">Asientos (clic para cambiar estado):</label>
+        <div id="seatsGrid" class="d-flex flex-wrap gap-1 justify-content-center mb-2">
+        </div>
+        <div class="btn-group btn-group-sm w-100 mb-2">
+          <button class="btn btn-outline-success" onclick="setAllSeats('available')">Todos libre</button>
+          <button class="btn btn-outline-danger" onclick="setAllSeats('occupied')">Todos ocupado</button>
+        </div>
+
+        <hr class="my-2">
+        <label class="form-label small mb-1">Asignar Orden a Asiento:</label>
+        <div class="input-group input-group-sm mb-2">
+          <select class="form-select form-select-sm" id="seatSelectForOrder">
+            <option value="">Seleccionar asiento...</option>
+          </select>
+          <button class="btn btn-primary" onclick="assignOrderToSeat()" title="Asignar orden">
+            <i class="bi bi-receipt"></i>
+          </button>
+        </div>
+        <div id="seatOrdersList" class="small">
+          <!-- Orders assigned to seats will appear here -->
+        </div>
+
+        <hr class="my-2">
+        <a href="#" id="newOrderLink" class="btn btn-primary btn-sm w-100">
+          <i class="bi bi-plus-circle me-1"></i>Nueva Orden para Mesa
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('floorCanvas');
+const ctx = canvas.getContext('2d');
+const scale = {{ plan.scale }};
+
+let tables = {{ tables | tojson | safe }};
+let roomPolygons = {{ plan.get_room_data() | tojson | safe }} || [];
+let selectedTable = null;
+
+// Convert room polygons format
+roomPolygons = roomPolygons.map((poly, idx) => ({
+  id: idx,
+  points: poly.points || poly,
+  color: poly.color || '#ffffff'
+}));
+
+// Initialize seats for tables
+tables.forEach(t => {
+  if (!t.seats || t.seats.length === 0) {
+    t.seats = Array(t.capacity).fill(null).map((_, i) => ({
+      index: i,
+      status: 'available',
+      order_id: null
+    }));
+  } else {
+    // Ensure all seats have order_id field
+    t.seats = t.seats.map((s, i) => ({
+      index: s.index !== undefined ? s.index : i,
+      status: s.status || 'available',
+      order_id: s.order_id || null
+    }));
+  }
+});
+
+canvas.addEventListener('click', onCanvasClick);
+
+function onCanvasClick(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  // Find clicked table
+  selectedTable = findTableAt(x, y);
+  if (selectedTable) {
+    showTablePanel(selectedTable);
+  } else {
+    hideTablePanel();
+  }
+  draw();
+}
+
+function findTableAt(x, y) {
+  for (let i = tables.length - 1; i >= 0; i--) {
+    const t = tables[i];
+    if (t.shape === 'circle') {
+      const dx = x - t.x;
+      const dy = y - t.y;
+      if (Math.sqrt(dx*dx + dy*dy) <= t.width/2) return t;
+    } else {
+      if (x >= t.x - t.width/2 && x <= t.x + t.width/2 &&
+          y >= t.y - t.height/2 && y <= t.y + t.height/2) {
+        return t;
+      }
+    }
+  }
+  return null;
+}
+
+function showTablePanel(t) {
+  document.getElementById('tablePanel').style.display = 'block';
+  document.getElementById('selectedTableNumber').textContent = t.table_number;
+  document.getElementById('selectedTableLabel').textContent = t.label || '';
+  document.getElementById('seatCountDisplay').textContent = t.seats ? t.seats.length : t.capacity;
+  renderSeatsGrid(t);
+  updateSeatSelect();
+  updateSeatOrdersList();
+  updateNewOrderLink();
+}
+
+function hideTablePanel() {
+  document.getElementById('tablePanel').style.display = 'none';
+}
+
+function renderSeatsGrid(t) {
+  const container = document.getElementById('seatsGrid');
+  container.innerHTML = '';
+
+  const seatColors = {
+    'available': 'success',
+    'occupied': 'danger',
+    'reserved': 'warning'
+  };
+
+  const numSeats = t.seats ? t.seats.length : t.capacity;
+  for (let i = 0; i < numSeats; i++) {
+    const seat = t.seats && t.seats[i] ? t.seats[i] : { status: 'available' };
+    const hasOrder = seat.order_id;
+    const btn = document.createElement('button');
+    btn.className = `btn btn-${seatColors[seat.status] || 'secondary'} btn-sm position-relative`;
+    btn.style.width = '32px';
+    btn.style.height = '32px';
+    btn.style.padding = '0';
+    btn.title = `Asiento ${i + 1}${hasOrder ? ' - Orden #' + seat.order_id : ''}`;
+    btn.textContent = i + 1;
+    btn.onclick = () => toggleSeat(i);
+    // Add order indicator badge
+    if (hasOrder) {
+      const badge = document.createElement('span');
+      badge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary';
+      badge.style.fontSize = '8px';
+      badge.textContent = 'O';
+      btn.appendChild(badge);
+    }
+    container.appendChild(btn);
+  }
+}
+
+function toggleSeat(index) {
+  if (!selectedTable) return;
+  const seat = selectedTable.seats[index];
+  const cycle = ['available', 'occupied', 'reserved'];
+  seat.status = cycle[(cycle.indexOf(seat.status) + 1) % cycle.length];
+  updateTableFromSeats(selectedTable);
+  renderSeatsGrid(selectedTable);
+  saveTableStatus(selectedTable);
+  draw();
+}
+
+function setAllSeats(status) {
+  if (!selectedTable) return;
+  selectedTable.seats.forEach(s => s.status = status);
+  updateTableFromSeats(selectedTable);
+  renderSeatsGrid(selectedTable);
+  saveTableStatus(selectedTable);
+  draw();
+}
+
+function updateTableFromSeats(t) {
+  const occupied = t.seats.filter(s => s.status === 'occupied').length;
+  const reserved = t.seats.filter(s => s.status === 'reserved').length;
+  if (occupied > 0) t.status = 'occupied';
+  else if (reserved > 0) t.status = 'reserved';
+  else t.status = 'available';
+}
+
+function setTableStatus(status) {
+  if (!selectedTable) return;
+  selectedTable.status = status;
+  // Update all seats to match
+  const seatStatus = status === 'dirty' ? 'available' : status;
+  selectedTable.seats.forEach(s => s.status = seatStatus);
+  renderSeatsGrid(selectedTable);
+  saveTableStatus(selectedTable);
+  draw();
+}
+
+const tableStatusUrlBase = "{{ url_for('restaurant.update_floor_table_status', table_id=0) }}".replace('/0/', '/{id}/');
+function saveTableStatus(t) {
+  fetch(tableStatusUrlBase.replace('{id}', t.id), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: t.status, seats: t.seats })
+  });
+  updateSummary();
+}
+
+function updateSummary() {
+  const counts = { available: 0, occupied: 0, reserved: 0, dirty: 0 };
+  tables.forEach(t => counts[t.status] = (counts[t.status] || 0) + 1);
+  document.getElementById('availableCount').textContent = counts.available;
+  document.getElementById('occupiedCount').textContent = counts.occupied;
+  document.getElementById('reservedCount').textContent = counts.reserved;
+  document.getElementById('dirtyCount').textContent = counts.dirty;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#e5e7eb';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawGrid();
+  roomPolygons.forEach(poly => drawPolygon(poly));
+  tables.forEach(t => drawTable(t, t === selectedTable));
+  updateSummary();
+}
+
+function drawGrid() {
+  ctx.strokeStyle = '#d1d5db';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < canvas.width; x += scale) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+  for (let y = 0; y < canvas.height; y += scale) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+}
+
+function drawPolygon(poly) {
+  if (!poly.points || poly.points.length < 3) return;
+  ctx.beginPath();
+  ctx.moveTo(poly.points[0].x, poly.points[0].y);
+  poly.points.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.closePath();
+  ctx.fillStyle = poly.color || '#ffffff';
+  ctx.fill();
+  ctx.strokeStyle = '#374151';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+
+function drawTable(t, isSelected) {
+  ctx.save();
+  ctx.translate(t.x, t.y);
+  ctx.rotate((t.rotation || 0) * Math.PI / 180);
+
+  const statusColors = {
+    'available': '#10b981',
+    'occupied': '#ef4444',
+    'reserved': '#f59e0b',
+    'dirty': '#6b7280'
+  };
+
+  // Draw seats first (behind the table)
+  drawSeats(t, statusColors);
+
+  // Table body with status-based border
+  ctx.fillStyle = t.color || '#8B4513';
+  ctx.strokeStyle = isSelected ? '#4f46e5' : statusColors[t.status] || '#000';
+  ctx.lineWidth = isSelected ? 4 : 3;
+
+  if (t.shape === 'circle') {
+    ctx.beginPath();
+    ctx.arc(0, 0, t.width/2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    ctx.fillRect(-t.width/2, -t.height/2, t.width, t.height);
+    ctx.strokeRect(-t.width/2, -t.height/2, t.width, t.height);
+  }
+
+  // Table number
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(t.table_number, 0, t.label ? -6 : 0);
+
+  if (t.label) {
+    ctx.font = '11px sans-serif';
+    ctx.fillText(t.label, 0, 8);
+  }
+
+  // Status indicator
+  ctx.beginPath();
+  ctx.arc(t.width/2 - 5, -t.height/2 + 5, 8, 0, Math.PI * 2);
+  ctx.fillStyle = statusColors[t.status] || '#6b7280';
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawSeats(t, statusColors) {
+  const seatRadius = 12;
+  const seatGap = 8;
+  const numSeats = t.seats ? t.seats.length : t.capacity;
+
+  if (numSeats === 0) return;
+
+  if (t.shape === 'circle') {
+    // Distribute seats evenly around the circle
+    const tableRadius = t.width / 2;
+    const seatDistance = tableRadius + seatRadius + seatGap;
+    for (let i = 0; i < numSeats; i++) {
+      const angle = (i / numSeats) * Math.PI * 2 - Math.PI / 2;
+      const sx = Math.cos(angle) * seatDistance;
+      const sy = Math.sin(angle) * seatDistance;
+      drawSeat(sx, sy, seatRadius, t.seats[i], statusColors, i + 1);
+    }
+  } else {
+    // Distribute seats around rectangle edges
+    const positions = calculateRectSeatPositions(t.width, t.height, numSeats, seatRadius, seatGap);
+    for (let i = 0; i < positions.length; i++) {
+      drawSeat(positions[i].x, positions[i].y, seatRadius, t.seats[i], statusColors, i + 1);
+    }
+  }
+}
+
+function calculateRectSeatPositions(width, height, numSeats, seatRadius, seatGap) {
+  const positions = [];
+  const offset = seatRadius + seatGap;
+
+  // Distribute seats: prioritize long sides, then short sides
+  // For a 4-top: 1 on each side
+  // For a 6-top: 2 on long sides, 1 on short sides
+  // For a 8-top: 3 on long sides, 1 on short sides
+
+  const isWide = width >= height;
+  const longSide = isWide ? width : height;
+  const shortSide = isWide ? height : width;
+
+  // Calculate seats per side based on total
+  let longSideSeats, shortSideSeats;
+  if (numSeats <= 2) {
+    // 1-2 seats: put on opposite short ends
+    longSideSeats = 0;
+    shortSideSeats = numSeats;
+  } else if (numSeats <= 4) {
+    // 3-4 seats: 1 on each side
+    longSideSeats = 2;
+    shortSideSeats = numSeats - 2;
+  } else if (numSeats <= 6) {
+    // 5-6 seats: 2 on long sides
+    longSideSeats = 4;
+    shortSideSeats = numSeats - 4;
+  } else {
+    // 7+ seats: more on long sides
+    longSideSeats = Math.ceil(numSeats * 0.6);
+    shortSideSeats = numSeats - longSideSeats;
+  }
+
+  // Top side (long side if wide)
+  const topSeats = Math.ceil(longSideSeats / 2);
+  for (let i = 0; i < topSeats; i++) {
+    const spacing = width / (topSeats + 1);
+    positions.push({
+      x: -width/2 + spacing * (i + 1),
+      y: -height/2 - offset
+    });
+  }
+
+  // Right side (short side if wide)
+  const rightSeats = Math.ceil(shortSideSeats / 2);
+  for (let i = 0; i < rightSeats; i++) {
+    const spacing = height / (rightSeats + 1);
+    positions.push({
+      x: width/2 + offset,
+      y: -height/2 + spacing * (i + 1)
+    });
+  }
+
+  // Bottom side
+  const bottomSeats = Math.floor(longSideSeats / 2);
+  for (let i = 0; i < bottomSeats; i++) {
+    const spacing = width / (bottomSeats + 1);
+    positions.push({
+      x: width/2 - spacing * (i + 1),
+      y: height/2 + offset
+    });
+  }
+
+  // Left side
+  const leftSeats = Math.floor(shortSideSeats / 2);
+  for (let i = 0; i < leftSeats; i++) {
+    const spacing = height / (leftSeats + 1);
+    positions.push({
+      x: -width/2 - offset,
+      y: height/2 - spacing * (i + 1)
+    });
+  }
+
+  // If we don't have enough positions, add more to top/bottom
+  while (positions.length < numSeats) {
+    const existing = positions.length;
+    const topExtra = Math.ceil((numSeats - existing) / 2);
+    for (let i = 0; i < topExtra && positions.length < numSeats; i++) {
+      positions.push({
+        x: -width/2 + (width / (topExtra + 1)) * (i + 1),
+        y: -height/2 - offset - seatRadius * 2.5
+      });
+    }
+    for (let i = 0; i < (numSeats - existing - topExtra) && positions.length < numSeats; i++) {
+      positions.push({
+        x: width/2 - (width / (topExtra + 1)) * (i + 1),
+        y: height/2 + offset + seatRadius * 2.5
+      });
+    }
+  }
+
+  return positions.slice(0, numSeats);
+}
+
+function drawSeat(x, y, radius, seat, statusColors, number) {
+  const status = seat ? seat.status : 'available';
+  const hasOrder = seat && seat.order_id;
+
+  // Seat circle
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = statusColors[status] || '#9ca3af';
+  ctx.fill();
+  ctx.strokeStyle = hasOrder ? '#4f46e5' : '#ffffff';
+  ctx.lineWidth = hasOrder ? 3 : 2;
+  ctx.stroke();
+
+  // Seat number
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(number.toString(), x, y);
+
+  // Order indicator
+  if (hasOrder) {
+    ctx.beginPath();
+    ctx.arc(x + radius - 2, y - radius + 2, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#4f46e5';
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 6px sans-serif';
+    ctx.fillText('O', x + radius - 2, y - radius + 2);
+  }
+}
+
+// Add seat to selected table
+function addSeat() {
+  if (!selectedTable) return;
+  const newSeat = {
+    index: selectedTable.seats.length,
+    status: 'available',
+    order_id: null
+  };
+  selectedTable.seats.push(newSeat);
+  selectedTable.capacity = selectedTable.seats.length;
+  updateSeatUI();
+  saveTableStatus(selectedTable);
+  draw();
+}
+
+// Remove last seat from selected table (minimum 1)
+function removeSeat() {
+  if (!selectedTable || selectedTable.seats.length <= 1) return;
+  selectedTable.seats.pop();
+  selectedTable.capacity = selectedTable.seats.length;
+  updateSeatUI();
+  saveTableStatus(selectedTable);
+  draw();
+}
+
+// Update seat count display and dropdown
+function updateSeatUI() {
+  if (!selectedTable) return;
+  document.getElementById('seatCountDisplay').textContent = selectedTable.seats.length;
+  renderSeatsGrid(selectedTable);
+  updateSeatSelect();
+  updateSeatOrdersList();
+  updateNewOrderLink();
+}
+
+// Update seat select dropdown
+function updateSeatSelect() {
+  const select = document.getElementById('seatSelectForOrder');
+  select.innerHTML = '<option value="">Seleccionar asiento...</option>';
+  if (!selectedTable) return;
+  selectedTable.seats.forEach((seat, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `Asiento ${i + 1} (${seat.status})${seat.order_id ? ' - Orden #' + seat.order_id : ''}`;
+    select.appendChild(opt);
+  });
+}
+
+// Update the list of orders assigned to seats
+function updateSeatOrdersList() {
+  const container = document.getElementById('seatOrdersList');
+  container.innerHTML = '';
+  if (!selectedTable) return;
+
+  const seatsWithOrders = selectedTable.seats.filter(s => s.order_id);
+  if (seatsWithOrders.length === 0) {
+    container.innerHTML = '<span class="text-muted">Sin ordenes asignadas</span>';
+    return;
+  }
+
+  seatsWithOrders.forEach((seat, idx) => {
+    const seatNum = selectedTable.seats.indexOf(seat) + 1;
+    const div = document.createElement('div');
+    div.className = 'd-flex justify-content-between align-items-center mb-1';
+    div.innerHTML = `
+      <span><i class="bi bi-circle-fill text-primary me-1" style="font-size: 8px;"></i>Asiento ${seatNum}: Orden #${seat.order_id}</span>
+      <button class="btn btn-outline-danger btn-sm py-0 px-1" onclick="removeOrderFromSeat(${seatNum - 1})" title="Quitar orden">
+        <i class="bi bi-x"></i>
+      </button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// Update the new order link with table parameter
+const newOrderBaseUrl = "{{ url_for('restaurant.new_order') }}";
+function updateNewOrderLink() {
+  const link = document.getElementById('newOrderLink');
+  if (selectedTable) {
+    link.href = newOrderBaseUrl + '?table=' + selectedTable.id;
+  }
+}
+
+// Assign order to selected seat
+function assignOrderToSeat() {
+  const select = document.getElementById('seatSelectForOrder');
+  const seatIndex = parseInt(select.value);
+  if (isNaN(seatIndex) || !selectedTable) return;
+
+  // Prompt for order ID (in real app, this would be a modal with order selection)
+  const orderId = prompt('Ingrese el numero de orden:');
+  if (!orderId) return;
+
+  selectedTable.seats[seatIndex].order_id = parseInt(orderId);
+  selectedTable.seats[seatIndex].status = 'occupied';
+  updateTableFromSeats(selectedTable);
+  updateSeatUI();
+  saveTableStatus(selectedTable);
+  draw();
+}
+
+// Remove order from seat
+function removeOrderFromSeat(seatIndex) {
+  if (!selectedTable || !selectedTable.seats[seatIndex]) return;
+  selectedTable.seats[seatIndex].order_id = null;
+  updateSeatUI();
+  saveTableStatus(selectedTable);
+  draw();
+}
+
+draw();
+</script>
+{% endblock %}

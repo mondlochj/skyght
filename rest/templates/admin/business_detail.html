@@ -1,0 +1,115 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ business.business_name }} - Admin Skyght{% endblock %}
+{% block content %}
+<div class="page-header mb-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2">
+      <li class="breadcrumb-item"><a href="{{ url_for('admin.businesses') }}">Negocios</a></li>
+      <li class="breadcrumb-item active">{{ business.business_name }}</li>
+    </ol>
+  </nav>
+  <h1><i class="bi bi-building me-2"></i>{{ business.business_name }}</h1>
+</div>
+
+<div class="row g-4">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title mb-4">Informacion</h5>
+
+        <div class="mb-3">
+          <small class="text-muted text-uppercase">Tipo</small>
+          <div class="fw-semibold">
+            {% if business.business_type == 'restaurant' %}Restaurante
+            {% elif business.business_type == 'hotel' %}Hotel
+            {% else %}Servicios{% endif %}
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <small class="text-muted text-uppercase">Telefono</small>
+          <div class="fw-semibold">{{ business.phone or 'No configurado' }}</div>
+        </div>
+
+        <div class="mb-3">
+          <small class="text-muted text-uppercase">Plan</small>
+          <div>
+            <span class="badge bg-{{ 'success' if business.plan == 'free' else 'warning' if business.plan == 'pro' else 'danger' }} fs-6">
+              {{ business.plan }}
+            </span>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <small class="text-muted text-uppercase">Zona horaria</small>
+          <div>{{ business.timezone }}</div>
+        </div>
+
+        <div class="mb-3">
+          <small class="text-muted text-uppercase">Clientes</small>
+          <div class="fw-semibold">{{ customer_count }}</div>
+        </div>
+
+        <div>
+          <small class="text-muted text-uppercase">Creado</small>
+          <div>{{ business.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+        </div>
+
+        <hr>
+
+        <form method="POST" action="{{ url_for('admin.toggle_business', business_id=business.id) }}">
+          <button type="submit" class="btn btn-{{ 'danger' if business.plan != 'suspended' else 'success' }} w-100">
+            <i class="bi bi-{{ 'pause' if business.plan != 'suspended' else 'play' }} me-1"></i>
+            {{ 'Suspender Negocio' if business.plan != 'suspended' else 'Activar Negocio' }}
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title mb-4">Miembros del Equipo</h5>
+
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Desde</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in members %}
+              <tr>
+                <td class="fw-semibold">{{ m.user.name }}</td>
+                <td>{{ m.user.email }}</td>
+                <td>
+                  <span class="badge bg-{{ 'danger' if m.role.name == 'owner' else 'primary' }}">
+                    {{ m.role.name }}
+                  </span>
+                </td>
+                <td>{{ m.created_at.strftime('%d/%m/%Y') }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="4" class="text-center text-muted">Sin miembros</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mt-4">
+  <a href="{{ url_for('admin.businesses') }}" class="btn btn-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Volver
+  </a>
+</div>
+{% endblock %}

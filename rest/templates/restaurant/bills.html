@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Cuentas - {{ g.current_business.business_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2><i class="bi bi-cash-stack me-2"></i>Cuentas Abiertas</h2>
+    <p class="text-muted mb-0">Cuentas pendientes de pago</p>
+  </div>
+</div>
+
+{% if bills %}
+<div class="table-responsive">
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Factura</th>
+        <th>Mesa</th>
+        <th>Orden</th>
+        <th class="text-end">Total</th>
+        <th class="text-end">Pagado</th>
+        <th class="text-end">Pendiente</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for bill in bills %}
+      <tr>
+        <td><strong>{{ bill.bill_number }}</strong></td>
+        <td>{% if bill.table %}Mesa {{ bill.table.table_number }}{% else %}-{% endif %}</td>
+        <td>{% if bill.order %}#{{ bill.order.order_number }}{% else %}-{% endif %}</td>
+        <td class="text-end">Q {{ "%.2f"|format(bill.total) }}</td>
+        <td class="text-end">Q {{ "%.2f"|format(bill.paid_amount) }}</td>
+        <td class="text-end"><strong>Q {{ "%.2f"|format(bill.balance_due) }}</strong></td>
+        <td>
+          <span class="badge bg-{% if bill.status == 'open' %}warning{% elif bill.status == 'partial' %}info{% else %}secondary{% endif %}">
+            {% if bill.status == 'open' %}Abierta{% elif bill.status == 'partial' %}Parcial{% else %}{{ bill.status }}{% endif %}
+          </span>
+        </td>
+        <td>
+          <a href="{{ url_for('restaurant.view_bill', bill_id=bill.id) }}" class="btn btn-sm btn-primary">
+            <i class="bi bi-cash me-1"></i>Cobrar
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-cash-stack display-1 text-muted"></i>
+    <h4 class="mt-3">No hay cuentas abiertas</h4>
+    <p class="text-muted">Las cuentas aparecerán cuando se generen desde las ordenes.</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

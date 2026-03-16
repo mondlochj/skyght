@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Habitaciones - Skyght Business{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1><i class="bi bi-door-open me-2"></i>Habitaciones</h1>
+    <p>Gestiona el inventario de habitaciones</p>
+  </div>
+  <a href="{{ url_for('hotel.add_room') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-2"></i>Agregar Habitacion
+  </a>
+</div>
+
+<div class="row g-4">
+  {% for r in rooms %}
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <h5 class="card-title mb-1">{{ r.room_name }}</h5>
+            <span class="badge bg-{{ 'success' if r.status == 'available' else 'danger' if r.status == 'occupied' else 'warning' }}">
+              {% if r.status == 'available' %}Disponible
+              {% elif r.status == 'occupied' %}Ocupada
+              {% else %}Mantenimiento{% endif %}
+            </span>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);">
+            <i class="bi bi-door-closed text-white"></i>
+          </div>
+        </div>
+
+        <div class="row g-2 text-center">
+          <div class="col-6">
+            <div class="p-2 rounded" style="background: #f8fafc;">
+              <small class="text-muted d-block">Capacidad</small>
+              <strong>{{ r.capacity }} <i class="bi bi-people"></i></strong>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 rounded" style="background: #f8fafc;">
+              <small class="text-muted d-block">Precio/Noche</small>
+              <strong>Q{{ "%.0f"|format(r.price_per_night) }}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="empty-state">
+          <div class="empty-state-icon">
+            <i class="bi bi-door-open"></i>
+          </div>
+          <p>No hay habitaciones configuradas</p>
+          <a href="{{ url_for('hotel.add_room') }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus me-1"></i>Agregar primera habitacion
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

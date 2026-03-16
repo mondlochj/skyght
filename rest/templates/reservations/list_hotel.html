@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="mt-4">Reservas del Hotel</h1>
+
+<a href="{{ url_for('reservations.create') }}" class="btn btn-primary mb-3">Nueva Reserva</a>
+
+<div class="table-responsive">
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Habitacion</th>
+        <th>Check-in</th>
+        <th>Check-out</th>
+        <th>Cliente</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in items %}
+      <tr>
+        <td>{{ b.room.room_name }}</td>
+        <td>{{ b.check_in }}</td>
+        <td>{{ b.check_out }}</td>
+        <td>{{ b.customer.name if b.customer else 'Sin asignar' }}</td>
+        <td>
+          <span class="badge bg-{{ 'warning' if b.status == 'pending' else 'success' if b.status == 'confirmed' else 'info' if b.status == 'checked_in' else 'secondary' }}">
+            {{ b.status }}
+          </span>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="text-center">No hay reservas</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

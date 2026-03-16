@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if item else 'Nuevo' }} Producto - {{ g.current_business.business_name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="bi bi-cup-hot me-2"></i>
+          {{ 'Editar Producto' if item else 'Nuevo Producto' }}
+        </h5>
+      </div>
+      <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+          <div class="row">
+            <div class="col-md-8">
+              <div class="mb-3">
+                <label class="form-label">Categoria <span class="text-danger">*</span></label>
+                <select name="category_id" class="form-select" required>
+                  <option value="">Seleccionar...</option>
+                  {% for cat in categories %}
+                  <option value="{{ cat.id }}" {% if item and item.category_id == cat.id %}selected{% endif %}>
+                    {{ cat.name }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                <input type="text" name="name" class="form-control" required
+                       value="{{ item.name if item else '' }}"
+                       placeholder="Ej: Hamburguesa Clasica">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Descripcion</label>
+                <textarea name="description" class="form-control" rows="3"
+                          placeholder="Ingredientes o descripcion del plato">{{ item.description if item else '' }}</textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Precio (Q) <span class="text-danger">*</span></label>
+                <input type="number" name="price" class="form-control" required step="0.01" min="0"
+                       value="{{ item.price if item else '' }}"
+                       placeholder="0.00">
+              </div>
+              {% if item %}
+              <div class="mb-3">
+                <div class="form-check">
+                  <input type="checkbox" name="is_available" class="form-check-input" id="isAvailable"
+                         {% if item.is_available %}checked{% endif %}>
+                  <label class="form-check-label" for="isAvailable">Disponible</label>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Foto del producto</label>
+                <div id="photoPreview" class="border rounded p-2 mb-2 text-center" style="min-height: 150px; background: #f8f9fa;">
+                  {% if item and item.photo_url %}
+                  <img src="{{ item.photo_url }}" class="img-fluid rounded" style="max-height: 150px;" id="previewImg">
+                  {% else %}
+                  <div class="text-muted py-4" id="noPhotoText">
+                    <i class="bi bi-image display-4"></i>
+                    <p class="small mb-0 mt-2">Sin foto</p>
+                  </div>
+                  <img src="" class="img-fluid rounded d-none" style="max-height: 150px;" id="previewImg">
+                  {% endif %}
+                </div>
+                <input type="file" name="photo" class="form-control form-control-sm" id="photoInput"
+                       accept="image/jpeg,image/png,image/gif,image/webp">
+                <small class="text-muted">JPG, PNG, GIF o WebP. Max 10MB.</small>
+              </div>
+
+              {% if item and photos %}
+              <div class="mb-3">
+                <label class="form-label small">Fotos actuales</label>
+                <div class="d-flex flex-wrap gap-2">
+                  {% for photo in photos %}
+                  <div class="position-relative" style="width: 60px;">
+                    <img src="{{ photo.url }}" class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;">
+                    {% if photo.is_primary %}
+                    <span class="badge bg-success position-absolute top-0 start-0" style="font-size: 0.6rem;">Principal</span>
+                    {% endif %}
+                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 p-0"
+                            style="width: 18px; height: 18px; font-size: 0.6rem;"
+                            onclick="deletePhoto({{ photo.id }})">
+                      <i class="bi bi-x"></i>
+                    </button>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-lg me-1"></i>Guardar
+            </button>
+            <a href="{{ url_for('restaurant.menu') }}" class="btn btn-outline-secondary">
+              Cancelar
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('photoInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const preview = document.getElementById('previewImg');
+      const noPhotoText = document.getElementById('noPhotoText');
+      preview.src = e.target.result;
+      preview.classList.remove('d-none');
+      if (noPhotoText) noPhotoText.classList.add('d-none');
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+function deletePhoto(photoId) {
+  if (!confirm('¿Eliminar esta foto?')) return;
+
+  fetch(`/uploads/delete/${photoId}`, { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) location.reload();
+    });
+}
+</script>
+{% endblock %}

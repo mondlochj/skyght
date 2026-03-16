@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Analiticas de Lista de Espera - {{ g.current_business.business_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2><i class="bi bi-graph-up me-2"></i>Analiticas de Lista de Espera</h2>
+    <p class="text-muted mb-0">Estadisticas de los ultimos 7 dias</p>
+  </div>
+  <a href="{{ url_for('restaurant.waitlist') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Volver
+  </a>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-4 mb-4">
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="display-4 text-primary">{{ total_entries }}</div>
+        <p class="text-muted mb-0">Total de entradas (7 dias)</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="display-4 text-{% if no_show_rate > 15 %}danger{% elif no_show_rate > 10 %}warning{% else %}success{% endif %}">
+          {{ "%.1f"|format(no_show_rate) }}%
+        </div>
+        <p class="text-muted mb-0">Tasa de No-Show</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        {% set avg_total_wait = daily_stats | map(attribute='avg_wait') | select('number') | list %}
+        <div class="display-4 text-info">
+          {{ "%.0f"|format(avg_total_wait | sum / (avg_total_wait | length or 1)) }} min
+        </div>
+        <p class="text-muted mb-0">Tiempo Promedio de Espera</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Daily Stats -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-calendar-week me-2"></i>Entradas por Dia
+      </div>
+      <div class="card-body">
+        <canvas id="dailyChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hourly Distribution -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-clock me-2"></i>Distribucion por Hora
+      </div>
+      <div class="card-body">
+        <canvas id="hourlyChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Daily Details Table -->
+<div class="card mt-4">
+  <div class="card-header">
+    <i class="bi bi-table me-2"></i>Detalle Diario
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Fecha</th>
+          <th class="text-center">Entradas</th>
+          <th class="text-center">Tiempo Promedio</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for stat in daily_stats %}
+        <tr>
+          <td>{{ stat.date }}</td>
+          <td class="text-center">{{ stat.total }}</td>
+          <td class="text-center">{{ "%.0f"|format(stat.avg_wait or 0) }} min</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="3" class="text-center text-muted py-4">No hay datos disponibles</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Daily Chart
+const dailyData = {{ daily_stats | map(attribute='total') | list | tojson }};
+const dailyLabels = {{ daily_stats | map(attribute='date') | list | tojson }};
+
+new Chart(document.getElementById('dailyChart'), {
+  type: 'bar',
+  data: {
+    labels: dailyLabels.map(d => new Date(d).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric' })),
+    datasets: [{
+      label: 'Entradas',
+      data: dailyData,
+      backgroundColor: 'rgba(79, 70, 229, 0.8)'
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } }
+  }
+});
+
+// Hourly Chart
+const hourlyData = {{ hourly_stats | map(attribute='count') | list | tojson }};
+const hourlyLabels = {{ hourly_stats | map(attribute='hour') | list | tojson }};
+
+new Chart(document.getElementById('hourlyChart'), {
+  type: 'line',
+  data: {
+    labels: hourlyLabels.map(h => `${h}:00`),
+    datasets: [{
+      label: 'Entradas',
+      data: hourlyData,
+      borderColor: 'rgba(16, 185, 129, 1)',
+      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+      fill: true,
+      tension: 0.4
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } }
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Ordenes de Trabajo - Skyght Business{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1><i class="bi bi-tools me-2"></i>Ordenes de Trabajo</h1>
+    <p>Gestiona los servicios programados</p>
+  </div>
+  <a href="{{ url_for('reservations.create') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-2"></i>Nueva Orden
+  </a>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Servicio</th>
+          <th>Direccion</th>
+          <th>Fecha</th>
+          <th>Cliente</th>
+          <th>Tecnico</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for j in jobs %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center">
+              <div class="rounded d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <i class="bi bi-wrench text-white"></i>
+              </div>
+              <strong>{{ j.service_type }}</strong>
+            </div>
+          </td>
+          <td>
+            <i class="bi bi-geo-alt text-muted me-1"></i>
+            {{ j.address or '-' }}
+          </td>
+          <td>
+            {% if j.scheduled_time %}
+            <i class="bi bi-calendar3 text-muted me-1"></i>
+            {{ j.scheduled_time.strftime('%d/%m/%Y %H:%M') }}
+            {% else %}
+            <span class="text-muted">Sin programar</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if j.customer %}
+            {{ j.customer.name or j.customer.phone }}
+            {% else %}
+            <span class="text-muted">Sin asignar</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if j.technician %}
+            <span class="badge bg-info">{{ j.technician.name }}</span>
+            {% else %}
+            <span class="text-muted">Sin asignar</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge bg-{{ 'warning' if j.status == 'pending' else 'info' if j.status == 'in_progress' else 'success' if j.status == 'completed' else 'secondary' }}">
+              {% if j.status == 'pending' %}Pendiente
+              {% elif j.status == 'in_progress' %}En progreso
+              {% elif j.status == 'completed' %}Completado
+              {% else %}{{ j.status }}{% endif %}
+            </span>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <div class="empty-state-icon">
+                <i class="bi bi-clipboard-x"></i>
+              </div>
+              <p>No hay ordenes de trabajo</p>
+              <a href="{{ url_for('reservations.create') }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus me-1"></i>Crear primera orden
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

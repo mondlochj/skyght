@@ -1,0 +1,153 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard - Admin Skyght{% endblock %}
+{% block content %}
+<div class="page-header mb-4 d-flex justify-content-between align-items-start">
+  <div>
+    <h1><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
+    <p class="text-muted">Resumen general de la plataforma</p>
+  </div>
+  <a href="{{ url_for('admin.create_business') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-2"></i>Crear Negocio
+  </a>
+</div>
+
+<!-- Stats -->
+<div class="row g-4 mb-4">
+  <div class="col-md-3">
+    <div class="card admin-stat">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small text-uppercase">Negocios</div>
+            <div class="fs-2 fw-bold">{{ stats.total_businesses }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);">
+            <i class="bi bi-building text-white"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card" style="border-left: 4px solid #10b981;">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small text-uppercase">Usuarios</div>
+            <div class="fs-2 fw-bold">{{ stats.total_users }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+            <i class="bi bi-people text-white"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card" style="border-left: 4px solid #f59e0b;">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small text-uppercase">Clientes</div>
+            <div class="fs-2 fw-bold">{{ stats.total_customers }}</div>
+          </div>
+          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+            <i class="bi bi-person-badge text-white"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card" style="border-left: 4px solid #0ea5e9;">
+      <div class="card-body">
+        <div class="text-muted small text-uppercase mb-2">Por Tipo</div>
+        <div class="d-flex gap-3">
+          <div class="text-center">
+            <div class="fw-bold">{{ stats.businesses_by_type.restaurant }}</div>
+            <small class="text-muted">Rest.</small>
+          </div>
+          <div class="text-center">
+            <div class="fw-bold">{{ stats.businesses_by_type.hotel }}</div>
+            <small class="text-muted">Hotel</small>
+          </div>
+          <div class="text-center">
+            <div class="fw-bold">{{ stats.businesses_by_type.service }}</div>
+            <small class="text-muted">Serv.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Recent Businesses -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-building me-2"></i>Negocios Recientes
+          </h5>
+          <a href="{{ url_for('admin.businesses') }}" class="btn btn-sm btn-outline-primary">Ver todos</a>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <tbody>
+              {% for b in recent_businesses %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ b.business_name }}</div>
+                  <small class="text-muted">{{ b.business_type }}</small>
+                </td>
+                <td class="text-end">
+                  <span class="badge bg-{{ 'success' if b.plan != 'suspended' else 'danger' }}">
+                    {{ b.plan }}
+                  </span>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td class="text-center text-muted">Sin negocios</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Users -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-people me-2"></i>Usuarios Recientes
+          </h5>
+          <a href="{{ url_for('admin.users') }}" class="btn btn-sm btn-outline-primary">Ver todos</a>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <tbody>
+              {% for u in recent_users %}
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ u.name }}</div>
+                  <small class="text-muted">{{ u.email }}</small>
+                </td>
+                <td class="text-end">
+                  <small class="text-muted">{{ u.created_at.strftime('%d/%m/%Y') }}</small>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td class="text-center text-muted">Sin usuarios</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Configuracion de Lista de Espera - {{ g.current_business.business_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2><i class="bi bi-gear me-2"></i>Configuracion de Lista de Espera</h2>
+    <p class="text-muted mb-0">Ajusta el comportamiento de la lista de espera</p>
+  </div>
+  <a href="{{ url_for('restaurant.waitlist') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Volver
+  </a>
+</div>
+
+<form method="POST">
+  <div class="row g-4">
+    <!-- Wait Time Calculation -->
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <i class="bi bi-clock me-2"></i>Calculo de Tiempo de Espera
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Tiempo promedio de rotacion de mesa (minutos)</label>
+            <input type="number" class="form-control" name="turnover"
+                   value="{{ settings.avg_table_turnover_minutes }}" min="15" max="180">
+            <small class="text-muted">Cuanto tiempo en promedio ocupa una mesa un cliente</small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Buffer por grupo en fila (minutos)</label>
+            <input type="number" class="form-control" name="buffer"
+                   value="{{ settings.buffer_minutes_per_party }}" min="0" max="30">
+            <small class="text-muted">Minutos adicionales por cada grupo adelante en la fila</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <i class="bi bi-bell me-2"></i>Notificaciones
+        </div>
+        <div class="card-body">
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="notify_whatsapp" id="notifyWA"
+                   {% if settings.notify_via_whatsapp %}checked{% endif %}>
+            <label class="form-check-label" for="notifyWA">
+              <i class="bi bi-whatsapp text-success me-1"></i>Notificar via WhatsApp
+            </label>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="notify_sms" id="notifySMS"
+                   {% if settings.notify_via_sms %}checked{% endif %}>
+            <label class="form-check-label" for="notifySMS">
+              <i class="bi bi-chat-dots me-1"></i>Notificar via SMS
+            </label>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Mensaje de notificacion</label>
+            <textarea class="form-control" name="notification_message" rows="3">{{ settings.notification_message }}</textarea>
+            <small class="text-muted">Variables: {name}, {party_size}, {restaurant}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Self Check-in -->
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <i class="bi bi-qr-code me-2"></i>Auto Check-in (QR)
+        </div>
+        <div class="card-body">
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="allow_self_checkin" id="allowSelf"
+                   {% if settings.allow_self_checkin %}checked{% endif %}>
+            <label class="form-check-label" for="allowSelf">
+              Permitir que clientes se agreguen via QR
+            </label>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Tamano maximo de grupo (auto check-in)</label>
+            <input type="number" class="form-control" name="max_party"
+                   value="{{ settings.max_party_size_self_checkin }}" min="2" max="20">
+            <small class="text-muted">Grupos mas grandes deben hablar con el anfitrion</small>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="require_phone" id="requirePhone"
+                   {% if settings.require_phone_self_checkin %}checked{% endif %}>
+            <label class="form-check-label" for="requirePhone">
+              Requerir telefono para auto check-in
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Display Settings -->
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-header">
+          <i class="bi bi-display me-2"></i>Pantalla del Cliente
+        </div>
+        <div class="card-body">
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="show_position" id="showPos"
+                   {% if settings.show_queue_position %}checked{% endif %}>
+            <label class="form-check-label" for="showPos">
+              Mostrar posicion en la fila al cliente
+            </label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="show_wait" id="showWait"
+                   {% if settings.show_estimated_wait %}checked{% endif %}>
+            <label class="form-check-label" for="showWait">
+              Mostrar tiempo estimado de espera
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg me-1"></i>Guardar Configuracion
+    </button>
+  </div>
+</form>
+{% endblock %}

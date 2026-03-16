@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Codigo QR Lista de Espera - {{ g.current_business.business_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2><i class="bi bi-qr-code me-2"></i>Codigo QR para Lista de Espera</h2>
+    <p class="text-muted mb-0">Los clientes pueden escanearlo para agregarse a la lista</p>
+  </div>
+  <a href="{{ url_for('restaurant.waitlist') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Volver
+  </a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body text-center p-5">
+        <h4 class="mb-4">{{ g.current_business.business_name }}</h4>
+
+        <div class="mb-4">
+          <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="img-fluid" style="max-width: 300px;">
+        </div>
+
+        <p class="text-muted mb-4">
+          Escanea para unirte a la lista de espera
+        </p>
+
+        <div class="d-grid gap-2">
+          <button class="btn btn-primary" onclick="printQR()">
+            <i class="bi bi-printer me-2"></i>Imprimir
+          </button>
+          <a href="data:image/png;base64,{{ qr_code }}" download="waitlist-qr.png" class="btn btn-outline-secondary">
+            <i class="bi bi-download me-2"></i>Descargar Imagen
+          </a>
+        </div>
+
+        <hr class="my-4">
+
+        <p class="small text-muted">
+          URL: <a href="{{ checkin_url }}" target="_blank">{{ checkin_url }}</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Print-friendly version -->
+<div id="printArea" class="d-none">
+  <div style="text-align: center; padding: 40px;">
+    <h2 style="margin-bottom: 20px;">{{ g.current_business.business_name }}</h2>
+    <img src="data:image/png;base64,{{ qr_code }}" style="width: 250px; height: 250px;">
+    <p style="margin-top: 20px; font-size: 18px;">
+      Escanea para unirte a la lista de espera
+    </p>
+  </div>
+</div>
+
+<script>
+function printQR() {
+  const printContent = document.getElementById('printArea').innerHTML;
+  const printWindow = window.open('', '', 'height=600,width=400');
+  printWindow.document.write('<html><head><title>QR Code</title></head><body>');
+  printWindow.document.write(printContent);
+  printWindow.document.write('</body></html>');
+  printWindow.document.close();
+  printWindow.print();
+}
+</script>
+{% endblock %}

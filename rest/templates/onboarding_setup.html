@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+  <h2>Configuracion Inicial</h2>
+
+  {% if business.business_type == 'restaurant' %}
+  <form method="POST">
+    <div class="mb-3">
+      <label class="form-label">Numero de mesas</label>
+      <input type="number" name="num_tables" class="form-control" min="1" value="10" required>
+    </div>
+    <button type="submit" class="btn btn-success">Guardar y Continuar</button>
+  </form>
+
+  {% elif business.business_type == 'hotel' %}
+  <form method="POST">
+    <div class="mb-3">
+      <label class="form-label">Numero de habitaciones</label>
+      <input type="number" name="num_rooms" class="form-control" min="1" value="8" required>
+    </div>
+    <button type="submit" class="btn btn-success">Crear Habitaciones y Continuar</button>
+  </form>
+
+  {% else %}
+  <p class="alert alert-info">Tu negocio de servicios esta listo. Puedes empezar a crear trabajos.</p>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Ir al Dashboard</a>
+  {% endif %}
+</div>
+{% endblock %}

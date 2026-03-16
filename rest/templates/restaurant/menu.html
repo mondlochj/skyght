@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Menu - {{ g.current_business.business_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2><i class="bi bi-book me-2"></i>Menu</h2>
+    <p class="text-muted mb-0">Gestiona tus categorias y productos</p>
+  </div>
+  <div class="btn-group">
+    <a href="{{ url_for('restaurant.new_category') }}" class="btn btn-outline-primary">
+      <i class="bi bi-folder-plus me-1"></i>Nueva Categoria
+    </a>
+    <a href="{{ url_for('restaurant.new_item') }}" class="btn btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Nuevo Producto
+    </a>
+  </div>
+</div>
+
+{% if categories %}
+{% for category in categories %}
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">
+      <i class="bi bi-folder me-2"></i>{{ category.name }}
+    </h5>
+    <div class="btn-group btn-group-sm">
+      <a href="{{ url_for('restaurant.edit_category', cat_id=category.id) }}" class="btn btn-outline-secondary">
+        <i class="bi bi-pencil"></i>
+      </a>
+      <form method="POST" action="{{ url_for('restaurant.delete_category', cat_id=category.id) }}" class="d-inline"
+            onsubmit="return confirm('¿Eliminar esta categoria y todos sus productos?')">
+        <button type="submit" class="btn btn-outline-danger">
+          <i class="bi bi-trash"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {% if category.description %}
+  <div class="card-body py-2 bg-light">
+    <small class="text-muted">{{ category.description }}</small>
+  </div>
+  {% endif %}
+
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th style="width: 60px;">Foto</th>
+          <th>Producto</th>
+          <th>Descripcion</th>
+          <th class="text-end">Precio</th>
+          <th class="text-center">Disponible</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in category.items.filter_by(is_active=True) %}
+        <tr>
+          <td>
+            {% if item.photo_url %}
+            <img src="{{ item.photo_url }}" class="rounded" style="width: 50px; height: 50px; object-fit: cover;">
+            {% else %}
+            <div class="rounded bg-light d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+              <i class="bi bi-image text-muted"></i>
+            </div>
+            {% endif %}
+          </td>
+          <td>
+            <strong>{{ item.name }}</strong>
+          </td>
+          <td>
+            <small class="text-muted">{{ item.description[:50] }}{% if item.description|length > 50 %}...{% endif %}</small>
+          </td>
+          <td class="text-end">
+            <strong>Q {{ "%.2f"|format(item.price) }}</strong>
+          </td>
+          <td class="text-center">
+            <div class="form-check form-switch d-inline-block">
+              <input class="form-check-input" type="checkbox" role="switch"
+                     {% if item.is_available %}checked{% endif %}
+                     onchange="toggleAvailability({{ item.id }}, this)">
+            </div>
+          </td>
+          <td>
+            <a href="{{ url_for('restaurant.edit_item', item_id=item.id) }}" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-3">
+            Sin productos en esta categoria
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-book display-1 text-muted"></i>
+    <h4 class="mt-3">No hay categorias</h4>
+    <p class="text-muted">Crea tu primera categoria para comenzar a agregar productos.</p>
+    <a href="{{ url_for('restaurant.new_category') }}" class="btn btn-primary">
+      <i class="bi bi-folder-plus me-2"></i>Crear Categoria
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<script>
+function toggleAvailability(itemId, checkbox) {
+  fetch(`/restaurant/menu/item/${itemId}/toggle`, {
+    method: 'POST'
+  })
+  .then(r => r.json())
+  .then(data => {
+    checkbox.checked = data.available;
+  });
+}
+</script>
+{% endblock %}
